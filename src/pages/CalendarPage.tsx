@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasks } from '../hooks/useTasks'
 import { useTimeBlocks } from '../hooks/useTimeBlocks'
-import { useDailyPlans } from '../hooks/useDailyPlans'
+
 import { ChevronLeft, ChevronRight, CalendarDays, List, LayoutGrid, Plus, X } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, isToday } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -16,7 +16,7 @@ export default function CalendarPage() {
   const { user } = useAuth()
   const { tasks, addTask } = useTasks(user?.id)
   const { timeBlocks, addTimeBlock } = useTimeBlocks(user?.id)
-  const { plans } = useDailyPlans(user?.id)
+
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   
@@ -28,7 +28,7 @@ export default function CalendarPage() {
 
   const monthDays = useMemo(() => { const ms = startOfMonth(selectedDate); const me = endOfMonth(selectedDate); return eachDayOfInterval({ start: startOfWeek(ms), end: endOfWeek(me) }) }, [selectedDate])
   const weekDays = useMemo(() => { const ws = startOfWeek(selectedDate); return eachDayOfInterval({ start: ws, end: addDays(ws, 6) }) }, [selectedDate])
-  const getEventsForDay = (date: Date) => { const ds = format(date, 'yyyy-MM-dd'); return { tasks: tasks.filter(t => t.due_date === ds), blocks: timeBlocks.filter(b => b.date === ds).sort((a, b) => a.start_time.localeCompare(b.start_time)), plans: plans.filter(p => p.date === ds).sort((a, b) => a.sort_order - b.sort_order) } }
+  const getEventsForDay = (date: Date) => { const ds = format(date, 'yyyy-MM-dd'); return { tasks: tasks.filter(t => t.due_date === ds), blocks: timeBlocks.filter(b => b.date === ds).sort((a, b) => a.start_time.localeCompare(b.start_time)) } }
   const getTitle = () => { if (viewMode === 'month') return format(selectedDate, 'yyyy年 M月', { locale: zhCN }); if (viewMode === 'week') { const ws = startOfWeek(selectedDate); const we = addDays(ws, 6); return `${format(ws, 'M月d日')} - ${format(we, 'M月d日')}` }; return format(selectedDate, 'yyyy年 M月d日 EEEE', { locale: zhCN }) }
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -39,7 +39,7 @@ export default function CalendarPage() {
     if (showAddModal === 'task') {
       await addTask({ title: formTitle, description: '', priority: 2, status: 'pending', due_date: ds, category_id: null, completed_at: null })
     } else if (showAddModal === 'block') {
-      await addTimeBlock({ title: formTitle, date: ds, start_time: formTime, end_time: formEndTime, color: formColor, category_id: null, task_id: null })
+      await addTimeBlock({ title: formTitle, date: ds, start_time: formTime, end_time: formEndTime, color: formColor, category_id: null, task_id: null, completed: false })
     }
     
     setShowAddModal(false)
@@ -136,7 +136,7 @@ export default function CalendarPage() {
   )
 }
 
-function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsForDay, onAddEvent }: { days: Date[]; currentMonth: Date; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[]; plans: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void }) {
+function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsForDay, onAddEvent }: { days: Date[]; currentMonth: Date; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void }) {
   return (
     <div className="glass p-3 md:p-6 fade-in" style={{ animationDelay: '0.1s' }}>
       <div className="grid grid-cols-7 gap-0.5 md:gap-1">
@@ -147,8 +147,8 @@ function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsFo
               <span className={`text-xs md:text-sm font-medium ${today ? 'bg-brand hover:bg-brand-hover text-white w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center' : ''}`}>{format(day, 'd')}</span>
               <button onClick={(e) => { e.stopPropagation(); onAddEvent('task', day) }} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 dark:text-gray-300 hidden md:block"><Plus size={14} /></button>
             </div>
-            <div className="mt-1 space-y-0.5 hidden md:block">{events.blocks.slice(0, 2).map(b => <div key={b.id} className="text-[10px] rounded px-1 truncate text-white" style={{ backgroundColor: b.color }}>{b.title}</div>)}{events.tasks.length > 0 && <div className="text-[10px] border border-border-default text-gray-600 dark:text-gray-400 rounded px-1 truncate">{events.tasks.length} 个任务</div>}{events.plans.length > 0 && <div className="text-[10px] border border-border-default text-gray-600 dark:text-gray-400 rounded px-1 truncate">{events.plans.length} 个规划</div>}</div>
-            <div className="mt-1 flex flex-wrap gap-1 md:hidden">{events.tasks.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />}{events.blocks.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />}{events.plans.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}</div>
+            <div className="mt-1 space-y-0.5 hidden md:block">{events.blocks.slice(0, 2).map(b => <div key={b.id} className={`text-[10px] rounded px-1 truncate ${b.completed ? 'opacity-60 line-through' : ''} text-white`} style={{ backgroundColor: b.color }}>{b.title}</div>)}{events.tasks.length > 0 && <div className="text-[10px] border border-border-default text-gray-600 dark:text-gray-400 rounded px-1 truncate">{events.tasks.length} 个任务</div>}</div>
+            <div className="mt-1 flex flex-wrap gap-1 md:hidden">{events.tasks.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />}{events.blocks.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />}</div>
           </div>
         )})}
       </div>
@@ -156,7 +156,7 @@ function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsFo
   )
 }
 
-function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[]; plans: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void }) {
+function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void }) {
   const HOUR_HEIGHT = 48
   return (
     <div className="glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
@@ -176,8 +176,8 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
           {days.map(day => { const events = getEventsForDay(day); return (
             <div key={day.toISOString()} className="relative border-l border-border-subtle cursor-crosshair" onDoubleClick={(e) => { e.stopPropagation(); const y = e.clientY - e.currentTarget.getBoundingClientRect().top; let h = Math.floor(y / 48) + 6; h = Math.max(6, Math.min(22, h)); onAddEvent('block', day, `${String(h).padStart(2, '0')}:00`); }}>
               {HOURS.filter(h => h >= 6 && h <= 22).map(hour => <div key={hour} className="h-12 border-b border-border-subtle" />)}
-              {events.blocks.map(block => { const [sh, sm] = block.start_time.split(':').map(Number); if (sh < 6 || sh > 22) return null; const top = ((sh - 6) * HOUR_HEIGHT) + ((sm / 60) * HOUR_HEIGHT); const [eh, em] = block.end_time.split(':').map(Number); const height = (((eh * 60 + em) - (sh * 60 + sm)) / 60) * HOUR_HEIGHT; return <div key={block.id} className="absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in" style={{ backgroundColor: block.color, top: `${top}px`, height: `${Math.max(height, 20)}px` }}><p className="font-medium truncate">{block.title}</p></div> })}
-              {(events.tasks.length > 0 || events.plans.length > 0) && <div className="absolute bottom-1 left-0.5 right-0.5 flex flex-col gap-0.5">{events.tasks.slice(0, 2).map(t => <div key={t.id} className="bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded px-1 py-0.5 text-[9px] truncate">{t.title}</div>)}{events.plans.slice(0, 2).map(p => <div key={p.id} className="bg-gray-600 dark:bg-gray-400 text-white dark:text-gray-900 rounded px-1 py-0.5 text-[9px] truncate">{p.content}</div>)}{(events.tasks.length + events.plans.length) > 4 && <div className="text-[9px] text-gray-400 dark:text-gray-500 px-1 font-medium">+{(events.tasks.length + events.plans.length) - 4}</div>}</div>}
+              {events.blocks.map(block => { const [sh, sm] = block.start_time.split(':').map(Number); if (sh < 6 || sh > 22) return null; const top = ((sh - 6) * HOUR_HEIGHT) + ((sm / 60) * HOUR_HEIGHT); const [eh, em] = block.end_time.split(':').map(Number); const height = (((eh * 60 + em) - (sh * 60 + sm)) / 60) * HOUR_HEIGHT; return <div key={block.id} className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ backgroundColor: block.color, top: `${top}px`, height: `${Math.max(height, 20)}px` }}><p className="font-medium truncate">{block.title}</p></div> })}
+              {events.tasks.length > 0 && <div className="absolute bottom-1 left-0.5 right-0.5 flex flex-col gap-0.5">{events.tasks.slice(0, 2).map(t => <div key={t.id} className="bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded px-1 py-0.5 text-[9px] truncate">{t.title}</div>)}{events.tasks.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500 px-1 font-medium">+{events.tasks.length - 2}</div>}</div>}
             </div>
           )})}
         </div>
@@ -186,7 +186,7 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
   )
 }
 
-function DayView({ date, events, onAddEvent }: { date: Date; events: { tasks: any[]; blocks: any[]; plans: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void }) {
+function DayView({ date, events, onAddEvent }: { date: Date; events: { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void }) {
   const HOUR_HEIGHT = 48; const displayHours = HOURS.filter(h => h >= 6 && h <= 22)
   const getBlockStyle = (block: any) => { const [sh, sm] = block.start_time.split(':').map(Number); const [eh, em] = block.end_time.split(':').map(Number); return { top: `${((sh - 6) * HOUR_HEIGHT) + ((sm / 60) * HOUR_HEIGHT)}px`, height: `${Math.max((((eh * 60 + em) - (sh * 60 + sm)) / 60) * HOUR_HEIGHT, 24)}px` } }
   return (
@@ -196,7 +196,7 @@ function DayView({ date, events, onAddEvent }: { date: Date; events: { tasks: an
           <div className="w-14 md:w-16 shrink-0">{displayHours.map(hour => <div key={hour} className="h-12 border-b border-border-subtle flex items-start justify-end pr-2 pt-0.5"><span className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span></div>)}</div>
           <div className="flex-1 relative border-l border-border-subtle cursor-crosshair" onDoubleClick={(e) => { e.stopPropagation(); const y = e.clientY - e.currentTarget.getBoundingClientRect().top; let h = Math.floor(y / 48) + 6; h = Math.max(6, Math.min(22, h)); onAddEvent('block', date, `${String(h).padStart(2, '0')}:00`); }}>
             {displayHours.map(hour => <div key={hour} className="h-12 border-b border-border-subtle" />)}
-            {events.blocks.map(block => { const [sh] = block.start_time.split(':').map(Number); if (sh < 6 || sh > 22) return null; return <div key={block.id} className="absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in" style={{ ...getBlockStyle(block), backgroundColor: block.color }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> })}
+            {events.blocks.map(block => { const [sh] = block.start_time.split(':').map(Number); if (sh < 6 || sh > 22) return null; return <div key={block.id} className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...getBlockStyle(block), backgroundColor: block.color }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> })}
           </div>
         </div></div>
       </div>
@@ -216,10 +216,6 @@ function DayView({ date, events, onAddEvent }: { date: Date; events: { tasks: an
               <button onClick={() => onAddEvent('task', date)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1"><Plus size={14} /></button>
             </div>
             {events.tasks.length === 0 ? <p className="text-xs text-gray-400 dark:text-gray-500 bg-bg-tertiary rounded-lg p-3 text-center border border-dashed border-border-default">没有必须今天完成的任务</p> : <div className="space-y-2">{events.tasks.map(task => <div key={task.id} className="p-2.5 rounded-lg bg-bg-tertiary transition-all duration-200 hover:bg-[#EBEAE5] dark:hover:bg-[#383633] border border-transparent hover:border-[#D6D3CD] dark:hover:border-[#4A4844]"><p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400 dark:text-gray-500' : 'text-text-primary'}`}>{task.title}</p></div>)}</div>}
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mb-3"><span className="w-2 h-2 rounded-full bg-gray-400" />每日规划 ({events.plans.length})</h4>
-            {events.plans.length === 0 ? <p className="text-xs text-gray-400 dark:text-gray-500 bg-bg-tertiary rounded-lg p-3 text-center border border-dashed border-border-default">没有制定早中晚计划</p> : <div className="space-y-1.5">{events.plans.map(plan => <div key={plan.id} className="p-2 rounded-lg bg-bg-tertiary flex gap-2 items-center"><div className={`w-1.5 h-1.5 rounded-full bg-gray-400`} /><p className={`text-sm font-medium ${plan.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-text-primary'}`}>{plan.content}</p></div>)}</div>}
           </div>
         </div>
       </div>

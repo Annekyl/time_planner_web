@@ -55,5 +55,18 @@ export function useTimeBlocks(userId: string | undefined) {
     return { error }
   }
 
-  return { timeBlocks, loading, addTimeBlock, updateTimeBlock, deleteTimeBlock, refetch: fetchTimeBlocks }
+  const toggleTimeBlock = async (id: string, completed: boolean) => {
+    const { data, error } = await supabase
+      .from('time_blocks')
+      .update({ completed })
+      .eq('id', id)
+      .select('*, category:categories(*), task:tasks(*)')
+      .single()
+    if (!error && data) {
+      setTimeBlocks(prev => prev.map(b => b.id === id ? data as TimeBlock : b))
+    }
+    return { data, error }
+  }
+
+  return { timeBlocks, loading, addTimeBlock, updateTimeBlock, deleteTimeBlock, toggleTimeBlock, refetch: fetchTimeBlocks }
 }

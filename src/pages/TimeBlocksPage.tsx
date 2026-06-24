@@ -18,7 +18,7 @@ export default function TimeBlocksPage() {
   const [form, setForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), start_time: '09:00', end_time: '10:00', category_id: '', task_id: '', color: '#3b82f6' })
   const dateStr = format(selectedDate, 'yyyy-MM-dd')
   const dayBlocks = useMemo(() => timeBlocks.filter(b => b.date === dateStr).sort((a, b) => a.start_time.localeCompare(b.start_time)), [timeBlocks, dateStr])
-  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); await addTimeBlock({ ...form, category_id: form.category_id || null, task_id: form.task_id || null }); setForm(p => ({ ...p, title: '', start_time: '09:00', end_time: '10:00', category_id: '', task_id: '' })); setShowForm(false) }
+  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); await addTimeBlock({ ...form, category_id: form.category_id || null, task_id: form.task_id || null, completed: false }); setForm(p => ({ ...p, title: '', start_time: '09:00', end_time: '10:00', category_id: '', task_id: '' })); setShowForm(false) }
   const timeToMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
   const getBlockStyle = (block: typeof dayBlocks[0]) => { const startMin = timeToMinutes(block.start_time) - 360; const endMin = timeToMinutes(block.end_time) - 360; return { top: `${(startMin / 60) * HOUR_HEIGHT}px`, height: `${Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 32)}px` } }
   const inputCls = "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-text-primary rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm transition-all duration-200"

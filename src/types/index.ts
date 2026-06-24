@@ -43,6 +43,7 @@ export interface TimeBlock {
   category_id: string | null
   task_id: string | null
   color: string
+  completed: boolean
   created_at: string
   category?: Category
   task?: Task
