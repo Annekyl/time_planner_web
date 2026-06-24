@@ -1,6 +1,5 @@
-import { Outlet, Navigate, useLocation } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
-import { useAuth } from '../hooks/useAuth'
 import Sidebar from './Sidebar'
 import { motion, AnimatePresence } from 'framer-motion'
 import PomodoroWidget from './PomodoroWidget'
