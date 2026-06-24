@@ -2,20 +2,32 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useDailyPlans } from '../hooks/useDailyPlans'
 import { useTasks } from '../hooks/useTasks'
-import { Sun, CloudSun, Moon, Plus, Trash2, Check, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { Sun, CloudSun, Moon, Plus, Trash2, Check, ChevronLeft, ChevronRight, CalendarDays, GripVertical } from 'lucide-react'
 import { format, addDays, subDays, isToday } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { motion, type Variants } from 'framer-motion'
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+}
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+}
 
 type Period = 'morning' | 'afternoon' | 'evening'
 const PERIODS: { key: Period; label: string; sub: string; icon: any; color: string; bg: string; darkBg: string }[] = [
-  { key: 'morning', label: '上午', sub: '6:00 - 12:00', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50', darkBg: 'dark:bg-amber-900/20' },
-  { key: 'afternoon', label: '下午', sub: '12:00 - 18:00', icon: CloudSun, color: 'text-orange-500', bg: 'bg-orange-50', darkBg: 'dark:bg-orange-900/20' },
-  { key: 'evening', label: '晚上', sub: '18:00 - 24:00', icon: Moon, color: 'text-indigo-500', bg: 'bg-indigo-50', darkBg: 'dark:bg-indigo-900/20' },
+  { key: 'morning', label: '上午', sub: '6:00 - 12:00', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50/50', darkBg: 'dark:bg-amber-900/20' },
+  { key: 'afternoon', label: '下午', sub: '12:00 - 18:00', icon: CloudSun, color: 'text-orange-500', bg: 'bg-orange-50/50', darkBg: 'dark:bg-orange-900/20' },
+  { key: 'evening', label: '晚上', sub: '18:00 - 24:00', icon: Moon, color: 'text-indigo-500', bg: 'bg-indigo-50/50', darkBg: 'dark:bg-indigo-900/20' },
 ]
 
 export default function DailyPlannerPage() {
   const { user } = useAuth()
-  const { plans, fetchPlansByDate, addPlan, togglePlan, deletePlan } = useDailyPlans(user?.id)
+  const { plans, fetchPlansByDate, addPlan, togglePlan, deletePlan, reorderPlans } = useDailyPlans(user?.id)
   const { tasks } = useTasks(user?.id)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showTaskPicker, setShowTaskPicker] = useState<{ period: Period } | null>(null)
@@ -26,49 +38,85 @@ export default function DailyPlannerPage() {
   const plansByPeriod = useMemo(() => {
     const grouped: Record<Period, typeof plans> = { morning: [], afternoon: [], evening: [] }
     plans.filter(p => p.date === dateStr).forEach(p => { grouped[p.period].push(p) })
+    // Sort by sort_order
+    Object.keys(grouped).forEach(k => grouped[k as Period].sort((a, b) => a.sort_order - b.sort_order))
     return grouped
   }, [plans, dateStr])
 
   const handleAddFromTask = async (period: Period, taskId: string) => { const task = tasks.find(t => t.id === taskId); if (task) await addPlan(dateStr, period, task.title, taskId); setShowTaskPicker(null) }
+  
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return
+    const { source, destination } = result
+    
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return
+
+    const sourcePeriod = source.droppableId as Period
+    const destPeriod = destination.droppableId as Period
+
+    const sourceItems = Array.from(plansByPeriod[sourcePeriod])
+    const destItems = sourcePeriod === destPeriod ? sourceItems : Array.from(plansByPeriod[destPeriod])
+
+    const [removed] = sourceItems.splice(source.index, 1)
+
+    if (sourcePeriod === destPeriod) {
+      sourceItems.splice(destination.index, 0, removed)
+      const updated = sourceItems.map((item, index) => ({ id: item.id, sort_order: index, period: sourcePeriod }))
+      reorderPlans(updated)
+    } else {
+      destItems.splice(destination.index, 0, removed)
+      const updatedSource = sourceItems.map((item, index) => ({ id: item.id, sort_order: index, period: sourcePeriod }))
+      const updatedDest = destItems.map((item, index) => ({ id: item.id, sort_order: index, period: destPeriod }))
+      reorderPlans([...updatedSource, ...updatedDest])
+    }
+  }
+
   const completedCount = plans.filter(p => p.date === dateStr && p.completed).length
   const totalCount = plans.filter(p => p.date === dateStr).length
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-4 md:mb-6 fade-in">
+    <motion.div 
+      className="max-w-3xl mx-auto"
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+    >
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">每日规划</h1>
-        {isToday(selectedDate) && <span className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-full font-medium">今天</span>}
-      </div>
+        {isToday(selectedDate) && <span className="text-xs bg-indigo-100/80 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full font-bold shadow-sm">今天</span>}
+      </motion.div>
 
-      <div className="flex items-center justify-between mb-6 fade-in" style={{ animationDelay: '0.05s' }}>
-        <button onClick={() => setSelectedDate(d => subDays(d, 1))} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press text-gray-600 dark:text-gray-400"><ChevronLeft size={20} /></button>
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6 glass p-2 rounded-2xl">
+        <button onClick={() => setSelectedDate(d => subDays(d, 1))} className="p-3 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-xl transition-all duration-200 btn-press text-gray-600 dark:text-gray-400"><ChevronLeft size={20} /></button>
         <div className="text-center">
-          <p className="font-semibold text-gray-800 dark:text-gray-100 text-base md:text-lg">{format(selectedDate, 'yyyy年M月d日 EEEE', { locale: zhCN })}</p>
-          <button onClick={() => setSelectedDate(new Date())} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">回到今天</button>
+          <p className="font-bold text-gray-800 dark:text-gray-100 text-base md:text-lg">{format(selectedDate, 'yyyy年M月d日 EEEE', { locale: zhCN })}</p>
+          <button onClick={() => setSelectedDate(new Date())} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors mt-0.5">回到今天</button>
         </div>
-        <button onClick={() => setSelectedDate(d => addDays(d, 1))} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press text-gray-600 dark:text-gray-400"><ChevronRight size={20} /></button>
-      </div>
+        <button onClick={() => setSelectedDate(d => addDays(d, 1))} className="p-3 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-xl transition-all duration-200 btn-press text-gray-600 dark:text-gray-400"><ChevronRight size={20} /></button>
+      </motion.div>
 
       {totalCount > 0 && (
-        <div className="mb-6 fade-in" style={{ animationDelay: '0.08s' }}>
-          <div className="flex items-center justify-between text-sm mb-1.5"><span className="text-gray-500 dark:text-gray-400">完成进度</span><span className="font-medium text-gray-700 dark:text-gray-300">{completedCount}/{totalCount}</span></div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"><div className="bg-indigo-500 h-2 rounded-full progress-bar" style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }} /></div>
-        </div>
+        <motion.div variants={itemVariants} className="mb-8">
+          <div className="flex items-center justify-between text-sm mb-2"><span className="font-semibold text-gray-500 dark:text-gray-400">完成进度</span><span className="font-bold text-indigo-600 dark:text-indigo-400">{completedCount}/{totalCount}</span></div>
+          <div className="w-full bg-white/50 dark:bg-gray-800/50 rounded-full h-3 overflow-hidden shadow-inner border border-white/20"><motion.div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }} transition={{ duration: 1, ease: 'easeOut' }} /></div>
+        </motion.div>
       )}
 
-      <div className="space-y-4">
-        {PERIODS.map((period, i) => (
-          <PeriodSection key={period.key} period={period} items={plansByPeriod[period.key]} onAdd={(content) => addPlan(dateStr, period.key, content)} onToggle={(id, completed) => togglePlan(id, completed)} onDelete={deletePlan} onAddFromTask={() => setShowTaskPicker({ period: period.key })} animationDelay={`${0.1 + i * 0.05}s`} />
-        ))}
-      </div>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <motion.div className="space-y-5" variants={containerVariants}>
+          {PERIODS.map((period) => (
+            <PeriodSection key={period.key} period={period} items={plansByPeriod[period.key]} onAdd={(content) => addPlan(dateStr, period.key, content)} onToggle={(id, completed) => togglePlan(id, completed)} onDelete={deletePlan} onAddFromTask={() => setShowTaskPicker({ period: period.key })} />
+          ))}
+        </motion.div>
+      </DragDropContext>
 
       {showTaskPicker && <TaskPickerModal tasks={tasks.filter(t => t.status !== 'completed')} onSelect={(taskId) => handleAddFromTask(showTaskPicker.period, taskId)} onClose={() => setShowTaskPicker(null)} />}
-    </div>
+    </motion.div>
   )
 }
 
-function PeriodSection({ period, items, onAdd, onToggle, onDelete, onAddFromTask, animationDelay }: {
-  period: typeof PERIODS[0]; items: any[]; onAdd: (content: string) => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string) => void; onAddFromTask: () => void; animationDelay: string
+function PeriodSection({ period, items, onAdd, onToggle, onDelete, onAddFromTask }: {
+  period: typeof PERIODS[0]; items: any[]; onAdd: (content: string) => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string) => void; onAddFromTask: () => void
 }) {
   const [newContent, setNewContent] = useState('')
   const [isAdding, setIsAdding] = useState(false)
@@ -79,37 +127,51 @@ function PeriodSection({ period, items, onAdd, onToggle, onDelete, onAddFromTask
   const completedCount = items.filter(i => i.completed).length
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden fade-in" style={{ animationDelay }}>
-      <div className={`flex items-center justify-between p-4 ${period.bg} ${period.darkBg} border-b border-gray-100/50 dark:border-gray-700/50`}>
+    <motion.div variants={itemVariants} className="glass rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className={`flex items-center justify-between p-4 ${period.bg} ${period.darkBg} border-b border-black/5 dark:border-white/5`}>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl ${period.bg} ${period.darkBg} flex items-center justify-center`}><Icon size={20} className={period.color} /></div>
-          <div><h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm md:text-base">{period.label}</h3><p className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">{period.sub}</p></div>
+          <div className={`w-12 h-12 rounded-2xl bg-white/60 dark:bg-gray-800/60 shadow-sm flex items-center justify-center`}><Icon size={24} className={period.color} /></div>
+          <div><h3 className="font-bold text-gray-800 dark:text-gray-100 text-base md:text-lg">{period.label}</h3><p className="text-[10px] md:text-xs font-medium text-gray-500 dark:text-gray-400">{period.sub}</p></div>
         </div>
         <div className="flex items-center gap-2">
-          {items.length > 0 && <span className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">{completedCount}/{items.length}</span>}
-          <button onClick={onAddFromTask} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white/80 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press" title="从任务添加"><CalendarDays size={16} /></button>
-          <button onClick={() => setIsAdding(!isAdding)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white/80 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press" title="添加计划"><Plus size={16} /></button>
+          {items.length > 0 && <span className="text-[11px] md:text-xs font-bold text-gray-400 dark:text-gray-500 mr-2 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-full">{completedCount}/{items.length}</span>}
+          <button onClick={onAddFromTask} className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 btn-press shadow-sm" title="从任务添加"><CalendarDays size={18} /></button>
+          <button onClick={() => setIsAdding(!isAdding)} className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 btn-press shadow-sm" title="添加计划"><Plus size={18} /></button>
         </div>
       </div>
-      <div className="p-3 md:p-4">
+      <div className="p-4 md:p-5">
         {isAdding && (
-          <div className="flex gap-2 mb-3 slide-down">
-            <input ref={inputRef} value={newContent} onChange={e => setNewContent(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setIsAdding(false) }} placeholder="输入计划内容..." className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all duration-200" />
-            <button onClick={handleAdd} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 btn-press transition-all duration-200">添加</button>
-            <button onClick={() => { setIsAdding(false); setNewContent('') }} className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 btn-press transition-all duration-200">取消</button>
-          </div>
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex gap-2 mb-4 overflow-hidden">
+            <input ref={inputRef} value={newContent} onChange={e => setNewContent(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setIsAdding(false) }} placeholder="输入计划内容..." className="flex-1 px-4 py-2 border border-white/20 bg-white/50 dark:bg-gray-800/50 text-gray-800 dark:text-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all duration-200" />
+            <button onClick={handleAdd} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 btn-press transition-all duration-200">添加</button>
+            <button onClick={() => { setIsAdding(false); setNewContent('') }} className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium hover:bg-white dark:hover:bg-gray-700 border border-black/5 dark:border-white/5 btn-press transition-all duration-200">取消</button>
+          </motion.div>
         )}
-        {items.length === 0 && !isAdding ? (
-          <div className="text-center py-6 text-gray-300 dark:text-gray-600"><p className="text-xs">暂无计划</p><p className="text-[10px] mt-1">点击 + 添加计划</p></div>
-        ) : (
-          <div className="space-y-1.5">{items.map((item, idx) => <PlanItem key={item.id} item={item} onToggle={() => onToggle(item.id, item.completed)} onDelete={() => onDelete(item.id)} animationDelay={`${idx * 0.03}s`} />)}</div>
-        )}
+        <Droppable droppableId={period.key}>
+          {(provided) => (
+            <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[40px]">
+              {items.length === 0 && !isAdding && (
+                <div className="text-center py-4 text-gray-400 dark:text-gray-500 absolute inset-0 flex flex-col justify-center pointer-events-none"><p className="text-sm font-medium">暂无计划</p><p className="text-xs mt-1">点击 + 添加计划</p></div>
+              )}
+              {items.map((item, index) => (
+                <Draggable key={item.id} draggableId={item.id} index={index}>
+                  {(provided, snapshot) => (
+                    <div ref={provided.innerRef} {...provided.draggableProps} style={{...provided.draggableProps.style, zIndex: snapshot.isDragging ? 50 : 1}}>
+                      <PlanItem item={item} onToggle={() => onToggle(item.id, item.completed)} onDelete={() => onDelete(item.id)} dragHandleProps={provided.dragHandleProps} isDragging={snapshot.isDragging} />
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
-function PlanItem({ item, onToggle, onDelete, animationDelay }: { item: any; onToggle: () => void; onDelete: () => void; animationDelay: string }) {
+function PlanItem({ item, onToggle, onDelete, dragHandleProps, isDragging }: { item: any; onToggle: () => void; onDelete: () => void; dragHandleProps: any; isDragging: boolean }) {
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(item.content)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -118,15 +180,16 @@ function PlanItem({ item, onToggle, onDelete, animationDelay }: { item: any; onT
   const handleSave = async () => { const content = editContent.trim(); if (content && content !== item.content) await updateContent(item.id, content); else if (!content) onDelete(); setEditing(false) }
 
   return (
-    <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 group fade-in ${item.completed ? 'bg-gray-50 dark:bg-gray-700/30 opacity-60' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`} style={{ animationDelay }}>
-      <button onClick={onToggle} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 checkbox-bounce ${item.completed ? 'bg-green-500 border-green-500 scale-110' : 'border-gray-300 dark:border-gray-600 hover:border-indigo-500'}`}>{item.completed && <Check size={12} className="text-white" />}</button>
+    <div className={`flex items-center gap-3 p-3 rounded-xl border border-white/10 transition-all duration-300 group ${item.completed ? 'bg-white/30 dark:bg-gray-800/30 opacity-60' : 'bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-700'} ${isDragging ? 'shadow-xl scale-[1.02] bg-white dark:bg-gray-700' : 'shadow-sm hover:shadow'}`}>
+      <div {...dragHandleProps} className="cursor-grab p-1 text-gray-300 dark:text-gray-600 hover:text-gray-500"><GripVertical size={16} /></div>
+      <button onClick={onToggle} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 checkbox-bounce ${item.completed ? 'bg-green-500 border-green-500 scale-110' : 'border-gray-300 dark:border-gray-500 hover:border-indigo-500'}`}>{item.completed && <Check size={12} className="text-white" />}</button>
       {editing ? (
         <input ref={inputRef} value={editContent} onChange={e => setEditContent(e.target.value)} onBlur={handleSave} onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setEditContent(item.content); setEditing(false) } }} className="flex-1 min-w-0 text-sm outline-none border-b border-indigo-500 pb-0.5 bg-transparent text-gray-800 dark:text-gray-200" />
       ) : (
-        <span onClick={() => setEditing(true)} className={`flex-1 min-w-0 text-sm cursor-text truncate transition-all duration-200 ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'}`}>{item.content}</span>
+        <span onClick={() => setEditing(true)} className={`flex-1 min-w-0 text-sm font-medium cursor-text truncate transition-all duration-200 ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400'}`}>{item.content}</span>
       )}
-      {item.task_id && <span className="text-[9px] text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded shrink-0">任务</span>}
-      <button onClick={onDelete} className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 transition-all duration-200 shrink-0 opacity-0 group-hover:opacity-100 btn-press"><Trash2 size={14} /></button>
+      {item.task_id && <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md shrink-0">任务</span>}
+      <button onClick={onDelete} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all duration-200 shrink-0 opacity-0 group-hover:opacity-100 btn-press"><Trash2 size={14} /></button>
     </div>
   )
 }
@@ -135,19 +198,19 @@ function TaskPickerModal({ tasks, onSelect, onClose }: { tasks: any[]; onSelect:
   const [search, setSearch] = useState('')
   const filtered = tasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase()))
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[60vh] flex flex-col slide-down" onClick={e => e.stopPropagation()}>
-        <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">选择任务</h3>
-          <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索任务..." className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass rounded-2xl shadow-2xl w-full max-w-md max-h-[60vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-black/5 dark:border-white/5">
+          <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 text-lg">选择任务</h3>
+          <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索任务..." className="w-full px-4 py-2 border border-white/20 bg-white/50 dark:bg-gray-800/50 text-gray-800 dark:text-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-colors" />
         </div>
         <div className="flex-1 overflow-y-auto p-2">
-          {filtered.length === 0 ? <p className="text-center text-gray-400 dark:text-gray-500 text-sm py-8">无可用任务</p> : (
-            filtered.map(task => <button key={task.id} onClick={() => onSelect(task.id)} className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-400 transition-all duration-200 truncate">{task.title}</button>)
+          {filtered.length === 0 ? <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-10 font-medium">无可用任务</p> : (
+            filtered.map(task => <button key={task.id} onClick={() => onSelect(task.id)} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200 truncate">{task.title}</button>)
           )}
         </div>
-        <div className="p-3 border-t border-gray-100 dark:border-gray-700"><button onClick={onClose} className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">取消</button></div>
-      </div>
-    </div>
+        <div className="p-4 border-t border-black/5 dark:border-white/5"><button onClick={onClose} className="w-full py-2.5 bg-white/50 dark:bg-gray-700/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors btn-press border border-white/10">取消</button></div>
+      </motion.div>
+    </motion.div>
   )
 }

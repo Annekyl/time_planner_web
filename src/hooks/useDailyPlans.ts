@@ -85,5 +85,24 @@ export function useDailyPlans(userId: string | undefined) {
     return { error }
   }
 
-  return { plans, loading, fetchPlansByDate, addPlan, togglePlan, deletePlan, updateContent }
+  const reorderPlans = async (updatedPlans: { id: string; sort_order: number; period: 'morning' | 'afternoon' | 'evening' }[]) => {
+    // Optimistic UI update
+    setPlans(prev => {
+      const newPlans = [...prev]
+      updatedPlans.forEach(up => {
+        const idx = newPlans.findIndex(p => p.id === up.id)
+        if (idx !== -1) {
+          newPlans[idx] = { ...newPlans[idx], sort_order: up.sort_order, period: up.period }
+        }
+      })
+      return newPlans.sort((a, b) => a.sort_order - b.sort_order)
+    })
+
+    // Update in background
+    for (const plan of updatedPlans) {
+      await supabase.from('daily_plans').update({ sort_order: plan.sort_order, period: plan.period }).eq('id', plan.id)
+    }
+  }
+
+  return { plans, loading, fetchPlansByDate, addPlan, togglePlan, deletePlan, updateContent, reorderPlans }
 }

@@ -1,7 +1,10 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
+import { useAuth } from '../hooks/useAuth'
 import Sidebar from './Sidebar'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import PomodoroWidget from './PomodoroWidget'
+import CommandPalette from './CommandPalette'
 
 export default function Layout() {
   const location = useLocation()
@@ -27,6 +30,8 @@ export default function Layout() {
           </motion.main>
         </AnimatePresence>
       </div>
+      <PomodoroWidget />
+      <CommandPalette />
     </div>
   )
 }
