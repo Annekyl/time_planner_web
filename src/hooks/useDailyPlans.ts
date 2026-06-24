@@ -58,12 +58,19 @@ export function useDailyPlans(userId: string | undefined) {
   }
 
   const togglePlan = async (id: string, completed: boolean) => {
+    const plan = plans.find(p => p.id === id)
     const { error } = await supabase
       .from('daily_plans')
       .update({ completed })
       .eq('id', id)
     if (!error) {
       setPlans(prev => prev.map(p => p.id === id ? { ...p, completed } : p))
+      if (plan && plan.task_id) {
+        await supabase
+          .from('tasks')
+          .update({ status: completed ? 'completed' : 'pending' })
+          .eq('id', plan.task_id)
+      }
     }
     return { error }
   }

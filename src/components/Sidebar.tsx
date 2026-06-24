@@ -2,13 +2,12 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../lib/theme'
 import { useTheme as useThemeColor, THEMES } from '../hooks/useTheme'
-import { LayoutDashboard, CheckSquare, Calendar, Target, BarChart3, ListChecks, CalendarDays, LogOut, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, Calendar, Target, BarChart3, CalendarDays, LogOut, Sun, Moon } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '仪表盘' },
   { to: '/planner', icon: CalendarDays, label: '每日规划' },
-  { to: '/todos', icon: ListChecks, label: '待办' },
   { to: '/tasks', icon: CheckSquare, label: '任务' },
   { to: '/calendar', icon: Calendar, label: '日历' },
   { to: '/goals', icon: Target, label: '目标' },
