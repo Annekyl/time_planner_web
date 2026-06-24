@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { LayoutDashboard, CheckSquare, Calendar, Target, Clock, BarChart3, LogOut } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, Calendar, Target, Clock, BarChart3, ListChecks, LogOut } from 'lucide-react'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '仪表盘' },
+  { to: '/todos', icon: ListChecks, label: '待办' },
   { to: '/tasks', icon: CheckSquare, label: '任务' },
   { to: '/calendar', icon: Calendar, label: '日历' },
   { to: '/goals', icon: Target, label: '目标' },

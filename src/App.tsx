@@ -3,6 +3,7 @@ import { useAuth } from './hooks/useAuth'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
+import TodosPage from './pages/TodosPage'
 import TasksPage from './pages/TasksPage'
 import CalendarPage from './pages/CalendarPage'
 import GoalsPage from './pages/GoalsPage'
@@ -33,6 +34,7 @@ function App() {
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage onLogin={() => {}} />} />
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<DashboardPage />} />
+          <Route path="todos" element={<TodosPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="goals" element={<GoalsPage />} />
