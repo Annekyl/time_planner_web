@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
+import { useTheme as useThemeColor } from './hooks/useTheme'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -20,6 +21,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const { user, loading } = useAuth()
+  useThemeColor()
 
   if (loading) {
     return (

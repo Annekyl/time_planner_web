@@ -6,6 +6,7 @@ import { useTimeBlocks } from '../hooks/useTimeBlocks'
 import { BarChart3, TrendingUp, CheckCircle, Clock, Target } from 'lucide-react'
 import { format, subDays, parseISO, eachDayOfInterval } from 'date-fns'
 import { motion, type Variants } from 'framer-motion'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -56,28 +57,51 @@ export default function StatsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
         <motion.div variants={itemVariants} className="glass rounded-3xl p-5 md:p-7 shadow-sm border-white/20 card-hover">
           <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><TrendingUp size={20} className="text-indigo-500" />近7天任务完成趋势</h2>
-          <div className="flex items-end gap-2 h-36 md:h-48 mt-4 bg-white/20 dark:bg-gray-800/20 p-4 rounded-2xl border border-white/10">
-            {stats.dailyCompletions.map((day, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1.5 md:gap-2 group">
-                <span className="text-[10px] md:text-xs font-bold text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">{day.count}</span>
-                <motion.div initial={{ height: 0 }} animate={{ height: `${(day.count / stats.maxDailyCount) * 100}%` }} transition={{ duration: 0.8, delay: i * 0.05, ease: 'easeOut' }} className="w-full bg-gradient-to-t from-indigo-600 to-purple-400 rounded-lg min-h-[4px] shadow-sm relative overflow-hidden">
-                  <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </motion.div>
-                <span className="text-[10px] md:text-xs font-medium text-gray-400 dark:text-gray-500">{day.date}</span>
-              </div>
-            ))}
+          <div className="h-48 md:h-64 mt-4 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats.dailyCompletions} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#818cf8" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} allowDecimals={false} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(8px)' }}
+                  itemStyle={{ color: '#4f46e5', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="count" name="完成任务数" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </motion.div>
         <motion.div variants={itemVariants} className="glass rounded-3xl p-5 md:p-7 shadow-sm border-white/20 card-hover">
           <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><BarChart3 size={20} className="text-purple-500" />分类统计</h2>
           {stats.categoryStats.length === 0 ? <p className="text-gray-400 dark:text-gray-500 text-sm font-medium mt-10 text-center">暂无分类数据</p> : (
-            <div className="space-y-4 mt-6">
-              {stats.categoryStats.map((cat, i) => (
-                <motion.div key={cat.name} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
-                  <div className="flex items-center justify-between mb-1.5"><span className="text-sm font-bold text-gray-700 dark:text-gray-200">{cat.name}</span><span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-white/50 dark:bg-gray-800/50 px-2 py-0.5 rounded-md">{cat.completed}/{cat.count} 已完成</span></div>
-                  <div className="w-full bg-white/40 dark:bg-gray-700/40 rounded-full h-2.5 overflow-hidden border border-white/20 shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${cat.count > 0 ? (cat.completed / cat.count) * 100 : 0}%` }} transition={{ duration: 1, ease: 'easeOut' }} className="h-full rounded-full shadow-sm" style={{ backgroundColor: cat.color }} /></div>
-                </motion.div>
-              ))}
+            <div className="h-48 md:h-64 mt-4 w-full flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats.categoryStats}
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="count"
+                    stroke="none"
+                  >
+                    {stats.categoryStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || '#6366f1'} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(8px)' }}
+                    itemStyle={{ fontWeight: 'bold' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#6b7280' }} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           )}
         </motion.div>

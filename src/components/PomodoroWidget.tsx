@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Play, Pause, RotateCcw, Timer, Minimize2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Play, Pause, RotateCcw, Timer, Minimize2, CloudRain, Coffee, Waves, VolumeX } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 type Mode = 'work' | 'shortBreak' | 'longBreak'
+type Sound = 'none' | 'rain' | 'cafe' | 'ocean'
 
 const MODE_TIMES = {
   work: 25 * 60,
@@ -10,11 +11,20 @@ const MODE_TIMES = {
   longBreak: 15 * 60
 }
 
+const AMBIENT_SOUNDS: { id: Sound; icon: any; url: string; label: string }[] = [
+  { id: 'none', icon: VolumeX, url: '', label: '静音' },
+  { id: 'rain', icon: CloudRain, url: 'https://actions.google.com/sounds/v1/weather/rain_on_roof.ogg', label: '下雨天' },
+  { id: 'cafe', icon: Coffee, url: 'https://actions.google.com/sounds/v1/crowds/cafe_restaurant_chatter.ogg', label: '咖啡馆' },
+  { id: 'ocean', icon: Waves, url: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg', label: '海浪' }
+]
+
 export default function PomodoroWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [mode, setMode] = useState<Mode>('work')
   const [timeLeft, setTimeLeft] = useState(MODE_TIMES.work)
   const [isActive, setIsActive] = useState(false)
+  const [sound, setSound] = useState<Sound>('none')
+  const audioRef = useRef<HTMLAudioElement>(null)
   
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -38,6 +48,16 @@ export default function PomodoroWidget() {
     }
   }, [mode, isActive])
 
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isActive && sound !== 'none') {
+        audioRef.current.play().catch(console.error)
+      } else {
+        audioRef.current.pause()
+      }
+    }
+  }, [isActive, sound])
+
   const toggleTimer = () => setIsActive(!isActive)
   const resetTimer = () => { setIsActive(false); setTimeLeft(MODE_TIMES[mode]) }
   
@@ -48,9 +68,11 @@ export default function PomodoroWidget() {
   }
 
   const progress = ((MODE_TIMES[mode] - timeLeft) / MODE_TIMES[mode]) * 100
+  const activeSound = AMBIENT_SOUNDS.find(s => s.id === sound)
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
+      {activeSound?.url && <audio ref={audioRef} src={activeSound.url} loop />}
       <AnimatePresence>
         {!isOpen && (
           <motion.button
@@ -84,10 +106,22 @@ export default function PomodoroWidget() {
               <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"><Minimize2 size={16} /></button>
             </div>
             
-            <div className="flex bg-white/40 dark:bg-gray-800/40 rounded-xl p-1 mb-6">
+            <div className="flex bg-white/40 dark:bg-gray-800/40 rounded-xl p-1 mb-4">
               <button onClick={() => { setMode('work'); setIsActive(false); setTimeLeft(MODE_TIMES.work) }} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'work' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>工作</button>
               <button onClick={() => { setMode('shortBreak'); setIsActive(false); setTimeLeft(MODE_TIMES.shortBreak) }} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'shortBreak' ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>短休</button>
               <button onClick={() => { setMode('longBreak'); setIsActive(false); setTimeLeft(MODE_TIMES.longBreak) }} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'longBreak' ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>长休</button>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 mb-6">
+              {AMBIENT_SOUNDS.map(s => {
+                const Icon = s.icon;
+                const isSelected = sound === s.id;
+                return (
+                  <button key={s.id} onClick={() => setSound(s.id)} title={s.label} className={`p-2 rounded-xl transition-all btn-press ${isSelected ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                    <Icon size={16} />
+                  </button>
+                )
+              })}
             </div>
 
             <div className="text-center mb-6 relative">

@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../lib/theme'
+import { useTheme as useThemeColor, THEMES } from '../hooks/useTheme'
 import { LayoutDashboard, CheckSquare, Calendar, Target, BarChart3, ListChecks, CalendarDays, LogOut, Sun, Moon } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -18,6 +19,7 @@ export default function Sidebar() {
   const { signOut } = useAuth()
   const location = useLocation()
   const { theme, toggle } = useTheme()
+  const { themeColor, setThemeColor } = useThemeColor()
 
   return (
     <>
@@ -33,6 +35,17 @@ export default function Sidebar() {
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
+        </div>
+        <div className="px-6 py-3 border-b border-gray-200/30 dark:border-gray-700/30 flex justify-between gap-1">
+          {THEMES.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setThemeColor(t.id)}
+              className={`w-5 h-5 rounded-full transition-transform btn-press ${themeColor === t.id ? 'scale-125 ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-gray-900' : 'hover:scale-110 opacity-70 hover:opacity-100'}`}
+              style={{ backgroundColor: t.color }}
+              title={t.name}
+            />
+          ))}
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map(item => {
