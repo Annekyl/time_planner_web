@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { LayoutDashboard, CheckSquare, Calendar, Target, Clock, BarChart3, LogOut } from 'lucide-react'
 
@@ -13,41 +13,62 @@ const navItems = [
 
 export default function Sidebar() {
   const { signOut } = useAuth()
+  const location = useLocation()
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 z-30">
-      <div className="p-6 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-indigo-600">时间规划</h1>
-      </div>
-
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map(item => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition ${
-                isActive
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`
-            }
+    <>
+      <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col h-screen fixed left-0 top-0 z-30">
+        <div className="p-6 border-b border-gray-100">
+          <h1 className="text-xl font-bold text-indigo-600">时间规划</h1>
+        </div>
+        <nav className="flex-1 p-4 space-y-1">
+          {navItems.map(item => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`
+              }
+            >
+              <item.icon size={20} />
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="p-4 border-t border-gray-100">
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full transition"
           >
-            <item.icon size={20} />
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
+            <LogOut size={20} />
+            退出登录
+          </button>
+        </div>
+      </aside>
 
-      <div className="p-4 border-t border-gray-100">
-        <button
-          onClick={signOut}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full transition"
-        >
-          <LogOut size={20} />
-          退出登录
-        </button>
-      </div>
-    </aside>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 safe-area-pb">
+        <div className="flex justify-around items-center h-16 px-1">
+          {navItems.map(item => {
+            const isActive = location.pathname === item.to
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition min-w-0 ${
+                  isActive ? 'text-indigo-600' : 'text-gray-400'
+                }`}
+              >
+                <item.icon size={20} />
+                <span className="text-[10px] font-medium truncate">{item.label}</span>
+              </NavLink>
+            )
+          })}
+        </div>
+      </nav>
+    </>
   )
 }

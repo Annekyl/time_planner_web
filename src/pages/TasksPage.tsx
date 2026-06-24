@@ -75,42 +75,42 @@ export default function TasksPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">任务管理</h1>
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">任务管理</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setShowCategoryForm(!showCategoryForm)}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            className="px-3 md:px-4 py-2 text-xs md:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition"
           >
-            管理分类
+            分类
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true) }}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm"
+            className="px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-1.5 text-xs md:text-sm"
           >
-            <Plus size={16} /> 新建任务
+            <Plus size={16} /> <span className="hidden sm:inline">新建任务</span><span className="sm:hidden">新建</span>
           </button>
         </div>
       </div>
 
       {showCategoryForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
-          <h3 className="font-medium text-gray-700 mb-3">添加分类</h3>
-          <form onSubmit={handleAddCategory} className="flex items-center gap-3">
-            <input type="color" value={catForm.color} onChange={e => setCatForm(p => ({ ...p, color: e.target.value }))} className="w-10 h-10 rounded cursor-pointer" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 mb-4">
+          <h3 className="font-medium text-gray-700 mb-3 text-sm">添加分类</h3>
+          <form onSubmit={handleAddCategory} className="flex items-center gap-2 md:gap-3">
+            <input type="color" value={catForm.color} onChange={e => setCatForm(p => ({ ...p, color: e.target.value }))} className="w-10 h-10 rounded cursor-pointer shrink-0" />
             <input
               value={catForm.name}
               onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))}
               placeholder="分类名称"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               required
             />
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">添加</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 shrink-0">添加</button>
           </form>
           <div className="flex gap-2 mt-3 flex-wrap">
             {categories.map(c => (
               <span key={c.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs" style={{ backgroundColor: c.color + '20', color: c.color }}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
                 {c.name}
               </span>
             ))}
@@ -118,38 +118,38 @@ export default function TasksPage() {
         </div>
       )}
 
-      <div className="flex gap-3 mb-4">
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+      <div className="flex gap-2 md:gap-3 mb-3 md:mb-4">
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg text-xs md:text-sm bg-white min-w-0 flex-1 md:flex-none">
           <option value="all">全部状态</option>
           <option value="pending">待办</option>
           <option value="in_progress">进行中</option>
           <option value="completed">已完成</option>
         </select>
-        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg text-xs md:text-sm bg-white min-w-0 flex-1 md:flex-none">
           <option value="all">全部分类</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-4">
-          <h3 className="font-medium text-gray-700 mb-4">{editingId ? '编辑任务' : '新建任务'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mb-4">
+          <h3 className="font-medium text-gray-700 mb-4 text-sm md:text-base">{editingId ? '编辑任务' : '新建任务'}</h3>
+          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
             <input
               value={form.title}
               onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
               placeholder="任务标题"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
               required
             />
             <textarea
               value={form.description}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
               placeholder="任务描述（可选）"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-sm"
               rows={2}
             />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">优先级</label>
                 <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: Number(e.target.value) as 1 | 2 | 3 | 4 }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
@@ -193,7 +193,7 @@ export default function TasksPage() {
 
       <div className="space-y-2">
         {filteredTasks.map(task => (
-          <div key={task.id} className={`bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4 ${task.status === 'completed' ? 'opacity-60' : ''}`}>
+          <div key={task.id} className={`bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 flex items-center gap-3 md:gap-4 ${task.status === 'completed' ? 'opacity-60' : ''}`}>
             <button
               onClick={() => handleToggleComplete(task)}
               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
@@ -203,24 +203,24 @@ export default function TasksPage() {
               {task.status === 'completed' && <Check size={12} className="text-white" />}
             </button>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <span className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                   {task.title}
                 </span>
                 {task.category && (
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: task.category.color + '20', color: task.category.color }}>
+                  <span className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full" style={{ backgroundColor: task.category.color + '20', color: task.category.color }}>
                     {task.category.name}
                   </span>
                 )}
               </div>
               {task.description && <p className="text-xs text-gray-400 mt-1 truncate">{task.description}</p>}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColor[task.priority]}`}>
+            <div className="flex items-center gap-1 md:gap-2 shrink-0">
+              <span className={`text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full ${priorityColor[task.priority]}`}>
                 {priorityLabel[task.priority]}
               </span>
               {task.due_date && (
-                <span className="text-xs text-gray-400">
+                <span className="text-[10px] md:text-xs text-gray-400 hidden sm:inline">
                   {format(parseISO(task.due_date), 'M/d')}
                 </span>
               )}

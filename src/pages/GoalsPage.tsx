@@ -49,35 +49,35 @@ export default function GoalsPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">目标管理</h1>
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">目标管理</h1>
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm"
+          className="px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-1.5 text-xs md:text-sm"
         >
-          <Plus size={16} /> 新建目标
+          <Plus size={16} /> <span className="hidden sm:inline">新建目标</span><span className="sm:hidden">新建</span>
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="font-medium text-gray-700 mb-4">{editingId ? '编辑目标' : '新建目标'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mb-4 md:mb-6">
+          <h3 className="font-medium text-gray-700 mb-4 text-sm md:text-base">{editingId ? '编辑目标' : '新建目标'}</h3>
+          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
             <input
               value={form.title}
               onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
               placeholder="目标标题"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
               required
             />
             <textarea
               value={form.description}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
               placeholder="目标描述（可选）"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-sm"
               rows={2}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">目标日期</label>
                 <input type="date" value={form.target_date} onChange={e => setForm(p => ({ ...p, target_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
@@ -103,23 +103,23 @@ export default function GoalsPage() {
         </div>
       )}
 
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <Target size={20} className="text-indigo-500" />
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4 flex items-center gap-2">
+          <Target size={18} className="text-indigo-500" />
           进行中 ({activeGoals.length})
         </h2>
         {activeGoals.length === 0 ? (
           <p className="text-gray-400 text-sm">暂无进行中的目标</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {activeGoals.map(goal => (
-              <div key={goal.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <div key={goal.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-5">
                 <div className="flex items-start justify-between mb-3">
-                  <div>
+                  <div className="min-w-0 flex-1 mr-2">
                     <h3 className="font-medium text-gray-800">{goal.title}</h3>
-                    {goal.description && <p className="text-xs text-gray-400 mt-1">{goal.description}</p>}
+                    {goal.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{goal.description}</p>}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-0.5 shrink-0">
                     <button onClick={() => handleComplete(goal)} className="p-1.5 text-gray-400 hover:text-green-600 transition" title="标记完成">
                       <CheckCircle size={16} />
                     </button>
@@ -149,22 +149,22 @@ export default function GoalsPage() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <CheckCircle size={20} className="text-green-500" />
+        <h2 className="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4 flex items-center gap-2">
+          <CheckCircle size={18} className="text-green-500" />
           已完成 ({completedGoals.length})
         </h2>
         {completedGoals.length === 0 ? (
           <p className="text-gray-400 text-sm">暂无已完成的目标</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {completedGoals.map(goal => (
-              <div key={goal.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 opacity-70">
+              <div key={goal.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-5 opacity-70">
                 <div className="flex items-start justify-between mb-3">
-                  <div>
+                  <div className="min-w-0 flex-1 mr-2">
                     <h3 className="font-medium text-gray-800 line-through">{goal.title}</h3>
-                    {goal.description && <p className="text-xs text-gray-400 mt-1">{goal.description}</p>}
+                    {goal.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{goal.description}</p>}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-0.5 shrink-0">
                     <button onClick={() => handleComplete(goal)} className="p-1.5 text-gray-400 hover:text-amber-600 transition" title="重新打开">
                       <XCircle size={16} />
                     </button>

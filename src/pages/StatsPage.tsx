@@ -67,38 +67,38 @@ export default function StatsPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">数据统计</h1>
+      <h1 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">数据统计</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         <StatCard icon={CheckCircle} label="已完成" value={stats.completedTasks} color="bg-green-500" />
         <StatCard icon={Clock} label="进行中" value={stats.inProgressTasks} color="bg-blue-500" />
         <StatCard icon={BarChart3} label="完成率" value={`${stats.completionRate}%`} color="bg-purple-500" />
         <StatCard icon={Target} label="活跃目标" value={stats.activeGoals} color="bg-amber-500" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <TrendingUp size={20} className="text-indigo-500" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+          <h2 className="text-base md:text-lg font-semibold text-gray-800 mb-3 md:mb-4 flex items-center gap-2">
+            <TrendingUp size={18} className="text-indigo-500" />
             近7天任务完成趋势
           </h2>
-          <div className="flex items-end gap-2 h-40">
+          <div className="flex items-end gap-1 md:gap-2 h-32 md:h-40">
             {stats.dailyCompletions.map((day, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-xs text-gray-500">{day.count}</span>
+              <div key={i} className="flex-1 flex flex-col items-center gap-0.5 md:gap-1">
+                <span className="text-[10px] md:text-xs text-gray-500">{day.count}</span>
                 <div
                   className="w-full bg-indigo-500 rounded-t transition-all min-h-[4px]"
                   style={{ height: `${(day.count / stats.maxDailyCount) * 100}%` }}
                 />
-                <span className="text-xs text-gray-400">{day.date}</span>
+                <span className="text-[10px] md:text-xs text-gray-400">{day.date}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <BarChart3 size={20} className="text-purple-500" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+          <h2 className="text-base md:text-lg font-semibold text-gray-800 mb-3 md:mb-4 flex items-center gap-2">
+            <BarChart3 size={18} className="text-purple-500" />
             分类统计
           </h2>
           {stats.categoryStats.length === 0 ? (
@@ -127,9 +127,9 @@ export default function StatsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="font-medium text-gray-700 mb-3">任务概览</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+          <h3 className="font-medium text-gray-700 mb-3 text-sm md:text-base">任务概览</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">总任务数</span>
@@ -146,8 +146,8 @@ export default function StatsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="font-medium text-gray-700 mb-3">时间块统计</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+          <h3 className="font-medium text-gray-700 mb-3 text-sm md:text-base">时间块统计</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">总时间块</span>
@@ -160,8 +160,8 @@ export default function StatsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="font-medium text-gray-700 mb-3">目标进度</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+          <h3 className="font-medium text-gray-700 mb-3 text-sm md:text-base">目标进度</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">活跃目标</span>
@@ -183,14 +183,14 @@ export default function StatsPage() {
 
 function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string | number; color: string }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">{label}</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+          <p className="text-xs md:text-sm text-gray-500">{label}</p>
+          <p className="text-xl md:text-2xl font-bold text-gray-800 mt-0.5 md:mt-1">{value}</p>
         </div>
-        <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center`}>
-          <Icon size={24} className="text-white" />
+        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${color} flex items-center justify-center`}>
+          <Icon size={20} className="text-white" />
         </div>
       </div>
     </div>

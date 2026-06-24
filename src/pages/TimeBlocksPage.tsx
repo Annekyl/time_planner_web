@@ -7,6 +7,7 @@ import { format, addDays, subDays } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6)
+const HOUR_HEIGHT = 64
 
 export default function TimeBlocksPage() {
   const { user } = useAuth()
@@ -45,53 +46,57 @@ export default function TimeBlocksPage() {
   const getBlockStyle = (block: typeof dayBlocks[0]) => {
     const startMin = timeToMinutes(block.start_time) - 360
     const endMin = timeToMinutes(block.end_time) - 360
-    const top = (startMin / 60) * 64
-    const height = ((endMin - startMin) / 60) * 64
+    const top = (startMin / 60) * HOUR_HEIGHT
+    const height = ((endMin - startMin) / 60) * HOUR_HEIGHT
     return { top: `${top}px`, height: `${Math.max(height, 32)}px` }
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">时间块规划</h1>
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">时间块规划</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm"
+          className="px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 text-xs md:text-sm"
         >
-          <Plus size={16} /> 添加时间块
+          <Plus size={16} /> <span className="hidden sm:inline">添加时间块</span><span className="sm:hidden">添加</span>
         </button>
       </div>
 
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => setSelectedDate(d => subDays(d, 1))} className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+      <div className="flex items-center justify-between md:justify-center gap-2 md:gap-4 mb-4 md:mb-6">
+        <button onClick={() => setSelectedDate(d => subDays(d, 1))} className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
           前一天
         </button>
-        <div className="text-center">
-          <p className="font-semibold text-gray-800">{format(selectedDate, 'yyyy年M月d日 EEEE', { locale: zhCN })}</p>
+        <div className="text-center px-2">
+          <p className="font-semibold text-gray-800 text-sm md:text-base">{format(selectedDate, 'yyyy年M月d日 EEEE', { locale: zhCN })}</p>
           <button onClick={() => setSelectedDate(new Date())} className="text-xs text-indigo-600 hover:text-indigo-700">
             回到今天
           </button>
         </div>
-        <button onClick={() => setSelectedDate(d => addDays(d, 1))} className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+        <button onClick={() => setSelectedDate(d => addDays(d, 1))} className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
           后一天
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mb-4 md:mb-6">
           <h3 className="font-medium text-gray-700 mb-4">添加时间块</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
             <input
               value={form.title}
               onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
               placeholder="时间块标题"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
               required
             />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">日期</label>
                 <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">颜色</label>
+                <input type="color" value={form.color} onChange={e => setForm(p => ({ ...p, color: e.target.value }))} className="w-full h-[38px] px-1 py-1 border border-gray-300 rounded-lg cursor-pointer" />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">开始时间</label>
@@ -100,10 +105,6 @@ export default function TimeBlocksPage() {
               <div>
                 <label className="block text-xs text-gray-500 mb-1">结束时间</label>
                 <input type="time" value={form.end_time} onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">颜色</label>
-                <input type="color" value={form.color} onChange={e => setForm(p => ({ ...p, color: e.target.value }))} className="w-full h-[38px] px-1 py-1 border border-gray-300 rounded-lg cursor-pointer" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -130,11 +131,11 @@ export default function TimeBlocksPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="relative" style={{ height: `${HOURS.length * 64}px` }}>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-6 overflow-x-auto">
+        <div className="relative min-w-[320px]" style={{ height: `${HOURS.length * HOUR_HEIGHT}px` }}>
           {HOURS.map(hour => (
-            <div key={hour} className="absolute left-0 right-0 border-t border-gray-100" style={{ top: `${(hour - 6) * 64}px` }}>
-              <span className="absolute -top-3 left-0 text-xs text-gray-400 w-12">
+            <div key={hour} className="absolute left-0 right-0 border-t border-gray-100" style={{ top: `${(hour - 6) * HOUR_HEIGHT}px` }}>
+              <span className="absolute -top-3 left-0 text-[10px] md:text-xs text-gray-400 w-10 md:w-12">
                 {String(hour).padStart(2, '0')}:00
               </span>
             </div>
@@ -143,18 +144,18 @@ export default function TimeBlocksPage() {
           {dayBlocks.map(block => (
             <div
               key={block.id}
-              className="absolute left-14 right-4 rounded-lg p-2 text-white text-sm overflow-hidden group cursor-pointer"
+              className="absolute left-12 md:left-14 right-2 md:right-4 rounded-lg p-1.5 md:p-2 text-white text-xs md:text-sm overflow-hidden group"
               style={{ ...getBlockStyle(block), backgroundColor: block.color }}
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-medium text-sm">{block.title}</p>
-                  <p className="text-xs opacity-80">{block.start_time} - {block.end_time}</p>
-                  {block.category && <p className="text-xs opacity-70">{block.category.name}</p>}
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{block.title}</p>
+                  <p className="opacity-80">{block.start_time} - {block.end_time}</p>
+                  {block.category && <p className="opacity-70 hidden md:block">{block.category.name}</p>}
                 </div>
                 <button
                   onClick={() => deleteTimeBlock(block.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/20 rounded transition"
+                  className="p-1 hover:bg-white/20 rounded transition shrink-0 md:opacity-0 md:group-hover:opacity-100"
                 >
                   <Trash2 size={12} />
                 </button>
