@@ -2,58 +2,75 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --font-sans: "Söhne", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: "Tiempos Text", "Georgia", serif;
+  
+  --color-brand: var(--theme-brand);
+  --color-brand-hover: var(--theme-brand-hover);
+  --color-bg-page: var(--theme-bg-page);
+  --color-bg-primary: var(--theme-bg-primary);
+  --color-bg-secondary: var(--theme-bg-secondary);
+  --color-bg-tertiary: var(--theme-bg-tertiary);
+  
+  --color-text-primary: var(--theme-text-primary);
+  --color-text-secondary: var(--theme-text-secondary);
+  --color-text-tertiary: var(--theme-text-tertiary);
+  
+  --color-border-subtle: var(--theme-border-subtle);
+  --color-border-default: var(--theme-border-default);
+  --color-border-strong: var(--theme-border-strong);
+}
+
 @layer base {
-  [data-theme="rose"] {
-    --color-indigo-50: var(--color-rose-50);
-    --color-indigo-100: var(--color-rose-100);
-    --color-indigo-200: var(--color-rose-200);
-    --color-indigo-300: var(--color-rose-300);
-    --color-indigo-400: var(--color-rose-400);
-    --color-indigo-500: var(--color-rose-500);
-    --color-indigo-600: var(--color-rose-600);
-    --color-indigo-700: var(--color-rose-700);
-    --color-indigo-800: var(--color-rose-800);
-    --color-indigo-900: var(--color-rose-900);
-    --color-indigo-950: var(--color-rose-950);
+  :root, html:not(.dark) {
+    --theme-brand: #D97756;
+    --theme-brand-hover: #C4633F;
+    --theme-bg-page: #F5F3EE;
+    --theme-bg-primary: #FFFFFF;
+    --theme-bg-secondary: #F1EFE8;
+    --theme-bg-tertiary: #E8E5DD;
+    
+    --theme-text-primary: #1A1915;
+    --theme-text-secondary: #5C5B56;
+    --theme-text-tertiary: #8C8B85;
+    
+    --theme-border-subtle: rgba(26, 25, 21, 0.10);
+    --theme-border-default: rgba(26, 25, 21, 0.18);
+    --theme-border-strong: rgba(26, 25, 21, 0.30);
   }
-  [data-theme="emerald"] {
-    --color-indigo-50: var(--color-emerald-50);
-    --color-indigo-100: var(--color-emerald-100);
-    --color-indigo-200: var(--color-emerald-200);
-    --color-indigo-300: var(--color-emerald-300);
-    --color-indigo-400: var(--color-emerald-400);
-    --color-indigo-500: var(--color-emerald-500);
-    --color-indigo-600: var(--color-emerald-600);
-    --color-indigo-700: var(--color-emerald-700);
-    --color-indigo-800: var(--color-emerald-800);
-    --color-indigo-900: var(--color-emerald-900);
-    --color-indigo-950: var(--color-emerald-950);
+
+  .dark {
+    --theme-brand: #E8855D;
+    --theme-brand-hover: #F09470;
+    --theme-bg-page: #1A1915;
+    --theme-bg-primary: #242320;
+    --theme-bg-secondary: #2C2B27;
+    --theme-bg-tertiary: #363530;
+    
+    --theme-text-primary: #EDECEA;
+    --theme-text-secondary: #A8A79F;
+    --theme-text-tertiary: #6E6D68;
+    
+    --theme-border-subtle: rgba(237, 236, 234, 0.10);
+    --theme-border-default: rgba(237, 236, 234, 0.18);
+    --theme-border-strong: rgba(237, 236, 234, 0.30);
   }
-  [data-theme="amber"] {
-    --color-indigo-50: var(--color-amber-50);
-    --color-indigo-100: var(--color-amber-100);
-    --color-indigo-200: var(--color-amber-200);
-    --color-indigo-300: var(--color-amber-300);
-    --color-indigo-400: var(--color-amber-400);
-    --color-indigo-500: var(--color-amber-500);
-    --color-indigo-600: var(--color-amber-600);
-    --color-indigo-700: var(--color-amber-700);
-    --color-indigo-800: var(--color-amber-800);
-    --color-indigo-900: var(--color-amber-900);
-    --color-indigo-950: var(--color-amber-950);
+  
+  * {
+    -webkit-tap-highlight-color: transparent;
   }
-  [data-theme="violet"] {
-    --color-indigo-50: var(--color-violet-50);
-    --color-indigo-100: var(--color-violet-100);
-    --color-indigo-200: var(--color-violet-200);
-    --color-indigo-300: var(--color-violet-300);
-    --color-indigo-400: var(--color-violet-400);
-    --color-indigo-500: var(--color-violet-500);
-    --color-indigo-600: var(--color-violet-600);
-    --color-indigo-700: var(--color-violet-700);
-    --color-indigo-800: var(--color-violet-800);
-    --color-indigo-900: var(--color-violet-900);
-    --color-indigo-950: var(--color-violet-950);
+  
+  html {
+    @apply bg-bg-page text-text-primary font-sans antialiased;
+  }
+  
+  body {
+    @apply bg-bg-page transition-colors duration-300;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium tracking-tight;
   }
 }
 
@@ -62,59 +79,36 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.05)];
+    @apply bg-bg-primary border border-border-default rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)];
   }
   .dark .glass {
-    @apply bg-gray-800/70 border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
-  }
-}
-
-@layer base {
-  * {
-    -webkit-tap-highlight-color: transparent;
-  }
-  html {
-    @apply bg-gray-50 text-gray-900;
-  }
-  html.dark {
-    @apply bg-gray-900 text-gray-50;
-  }
-  body {
-    @apply transition-colors duration-300 bg-gray-50 dark:bg-gray-900;
+    @apply bg-bg-primary border border-border-default shadow-[0_1px_3px_rgba(0,0,0,0.24)];
   }
 }
 
 @layer components {
   .card-hover {
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   }
   .card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px -10px rgb(0 0 0 / 0.12), 0 4px 10px -6px rgb(0 0 0 / 0.04);
+    @apply border-border-strong;
   }
-  .card-hover:active {
-    transform: translateY(0) scale(0.98);
-  }
-  .dark .card-hover:hover {
-    box-shadow: 0 12px 30px -10px rgb(0 0 0 / 0.5), 0 4px 10px -6px rgb(0 0 0 / 0.3);
-  }
-
+  
   .btn-press {
-    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
+    transition: transform 0.1s ease, opacity 0.15s ease, background-color 0.2s ease;
   }
   .btn-press:active {
-    transform: scale(0.95);
-    opacity: 0.8;
+    transform: scale(0.97);
   }
-
+  
   .checkbox-bounce {
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.15s ease;
   }
   .checkbox-bounce:active {
-    transform: scale(0.85);
+    transform: scale(0.9);
   }
-
+  
   .progress-bar {
-    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 }

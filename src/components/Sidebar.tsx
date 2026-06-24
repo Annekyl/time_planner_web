@@ -22,20 +22,20 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="hidden md:flex w-64 glass flex-col h-screen fixed left-0 top-0 z-30 transition-colors duration-300 !border-r !border-white/20 dark:!border-white/5">
-        <div className="p-6 border-b border-gray-200/30 dark:border-gray-700/30 flex items-center justify-between">
-          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-500">
+      <aside className="hidden md:flex w-64 bg-transparent border-r border-border-subtle dark:border-border-subtle flex-col h-screen fixed left-0 top-0 z-30 transition-colors duration-300">
+        <div className="p-6 border-b border-border-subtle dark:border-border-subtle flex items-center justify-between">
+          <h1 className="text-xl font-bold font-serif text-brand dark:text-brand">
             时间规划
           </h1>
           <button
             onClick={toggle}
-            className="p-2 rounded-xl hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-all duration-300 text-gray-500 dark:text-gray-400 btn-press"
+            className="p-2 rounded-xl hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-all duration-300 text-gray-500 dark:text-text-secondary btn-press"
             title={theme === 'light' ? '切换到夜间模式' : '切换到日间模式'}
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
         </div>
-        <div className="px-6 py-3 border-b border-gray-200/30 dark:border-gray-700/30 flex justify-between gap-1">
+        <div className="px-6 py-3 border-b border-border-subtle dark:border-border-subtle flex justify-between gap-1">
           {THEMES.map(t => (
             <button
               key={t.id}
@@ -56,13 +56,13 @@ export default function Sidebar() {
                 className={`relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors duration-300 ${
                   isActive
                     ? 'text-indigo-700 dark:text-indigo-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                    : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-gray-100'
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="sidebar-active"
-                    className="absolute inset-0 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-xl"
+                    className="absolute inset-0 bg-bg-secondary dark:bg-bg-secondary rounded-xl border border-black/5 dark:border-white/5"
                     initial={false}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
@@ -73,10 +73,10 @@ export default function Sidebar() {
             )
           })}
         </nav>
-        <div className="p-4 border-t border-gray-200/30 dark:border-gray-700/30">
+        <div className="p-4 border-t border-border-subtle dark:border-border-subtle">
           <button
             onClick={signOut}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-red-50/80 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 w-full transition-all duration-300 btn-press"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary dark:text-text-secondary hover:bg-red-50/80 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 w-full transition-all duration-300 btn-press"
           >
             <LogOut size={20} />
             退出登录
@@ -84,7 +84,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass !border-t !border-white/20 dark:!border-white/5 z-30 safe-area-pb transition-colors duration-300">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-bg-page dark:bg-bg-page border-t border-border-subtle dark:border-border-subtle z-30 safe-area-pb transition-colors duration-300">
         <div className="flex justify-around items-center h-[68px] px-2 relative">
           {navItems.map(item => {
             const isActive = location.pathname === item.to
@@ -97,17 +97,17 @@ export default function Sidebar() {
                 {isActive && (
                   <motion.div
                     layoutId="mobile-nav-active"
-                    className="absolute -top-px w-8 h-1 bg-indigo-500 rounded-b-full shadow-[0_2px_8px_rgba(99,102,241,0.6)]"
+                    className="absolute -top-px w-8 h-1 bg-brand rounded-b-full"
                     initial={false}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
                 <item.icon 
                   size={22} 
-                  className={`transition-all duration-300 ${isActive ? 'text-indigo-600 dark:text-indigo-400 -translate-y-1 scale-110' : 'text-gray-400 dark:text-gray-500'}`} 
+                  className={`transition-all duration-300 ${isActive ? 'text-brand dark:text-brand -translate-y-1 scale-110' : 'text-gray-400 dark:text-gray-500'}`} 
                   strokeWidth={isActive ? 2.5 : 2} 
                 />
-                <span className={`text-[10px] font-medium transition-all duration-300 ${isActive ? 'text-indigo-600 dark:text-indigo-400 opacity-100' : 'text-gray-400 dark:text-gray-500 opacity-70'}`}>
+                <span className={`text-[10px] font-medium transition-all duration-300 ${isActive ? 'text-brand dark:text-brand opacity-100' : 'text-gray-400 dark:text-gray-500 opacity-70'}`}>
                   {item.label}
                 </span>
               </NavLink>

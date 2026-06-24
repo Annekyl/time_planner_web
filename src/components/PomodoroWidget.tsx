@@ -109,7 +109,7 @@ export default function PomodoroWidget() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
-            className="w-12 h-12 md:w-14 md:h-14 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-500/30 flex items-center justify-center btn-press relative cursor-grab active:cursor-grabbing"
+            className="w-12 h-12 md:w-14 md:h-14 bg-indigo-600 text-white rounded-full shadow-none flex items-center justify-center btn-press relative cursor-grab active:cursor-grabbing"
           >
             <Timer size={20} className="md:w-6 md:h-6" />
             {isActive && (
@@ -172,7 +172,7 @@ export default function PomodoroWidget() {
               onPointerDownCapture={e => e.stopPropagation()}
             >
               <button onClick={resetTimer} className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/50 dark:bg-gray-700/50 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 shadow-sm transition-all btn-press"><RotateCcw size={16} className="md:w-[18px] md:h-[18px]" /></button>
-              <button onClick={toggleTimer} className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 transition-all btn-press ${isActive ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}>{isActive ? <Pause size={20} className="md:w-6 md:h-6" fill="currentColor" /> : <Play size={20} className="ml-1 md:w-6 md:h-6" fill="currentColor" />}</button>
+              <button onClick={toggleTimer} className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-white shadow-none transition-all btn-press ${isActive ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}>{isActive ? <Pause size={20} className="md:w-6 md:h-6" fill="currentColor" /> : <Play size={20} className="ml-1 md:w-6 md:h-6" fill="currentColor" />}</button>
             </div>
           </motion.div>
         )}

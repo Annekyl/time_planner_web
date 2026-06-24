@@ -109,7 +109,7 @@ export default function CommandPalette() {
                         key={action.id}
                         onMouseEnter={() => setSelectedIndex(i)}
                         onClick={() => { navigate(action.path); setIsOpen(false); }}
-                        className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-left ${active ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50'}`}
+                        className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-left ${active ? 'bg-indigo-600 text-white shadow-none' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50'}`}
                       >
                         <action.icon size={18} className={`mr-3 ${active ? 'text-white' : 'text-gray-400'}`} />
                         <span className="font-medium text-sm">{action.title}</span>

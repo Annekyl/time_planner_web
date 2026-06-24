@@ -13,7 +13,7 @@ export default function Layout() {
   }, [location.pathname])
 
   return (
-    <div className="flex min-h-screen bg-gray-50/50 dark:bg-gray-950/50 transition-colors duration-300">
+    <div className="flex min-h-screen transition-colors duration-300 bg-bg-page">
       <Sidebar />
       <div className="flex-1 md:ml-64 relative min-h-screen">
         <AnimatePresence mode="wait">
