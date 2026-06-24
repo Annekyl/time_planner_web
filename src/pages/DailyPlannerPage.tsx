@@ -2,7 +2,9 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useDailyPlans } from '../hooks/useDailyPlans'
 import { useTasks } from '../hooks/useTasks'
-import { Sun, CloudSun, Moon, Plus, Trash2, Check, ChevronLeft, ChevronRight, CalendarDays, GripVertical } from 'lucide-react'
+import { useTimeBlocks } from '../hooks/useTimeBlocks'
+import type { TimeBlock } from '../types'
+import { Sun, CloudSun, Moon, Plus, Trash2, Check, ChevronLeft, ChevronRight, CalendarDays, GripVertical, Clock } from 'lucide-react'
 import { format, addDays, subDays, isToday } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { motion, type Variants } from 'framer-motion'
@@ -29,6 +31,7 @@ export default function DailyPlannerPage() {
   const { user } = useAuth()
   const { plans, fetchPlansByDate, addPlan, togglePlan, deletePlan, reorderPlans } = useDailyPlans(user?.id)
   const { tasks } = useTasks(user?.id)
+  const { timeBlocks } = useTimeBlocks(user?.id)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showTaskPicker, setShowTaskPicker] = useState<{ period: Period } | null>(null)
   const dateStr = format(selectedDate, 'yyyy-MM-dd')
@@ -42,6 +45,17 @@ export default function DailyPlannerPage() {
     Object.keys(grouped).forEach(k => grouped[k as Period].sort((a, b) => a.sort_order - b.sort_order))
     return grouped
   }, [plans, dateStr])
+
+  const timeBlocksByPeriod = useMemo(() => {
+    const grouped: Record<Period, TimeBlock[]> = { morning: [], afternoon: [], evening: [] }
+    timeBlocks.filter(b => b.date === dateStr).forEach(b => {
+      const h = parseInt(b.start_time.split(':')[0], 10)
+      if (h >= 6 && h < 12) grouped.morning.push(b)
+      else if (h >= 12 && h < 18) grouped.afternoon.push(b)
+      else if (h >= 18 || h < 6) grouped.evening.push(b)
+    })
+    return grouped
+  }, [timeBlocks, dateStr])
 
   const handleAddFromTask = async (period: Period, taskId: string) => { const task = tasks.find(t => t.id === taskId); if (task) await addPlan(dateStr, period, task.title, taskId); setShowTaskPicker(null) }
   
@@ -105,7 +119,7 @@ export default function DailyPlannerPage() {
       <DragDropContext onDragEnd={onDragEnd}>
         <motion.div className="space-y-5" variants={containerVariants}>
           {PERIODS.map((period) => (
-            <PeriodSection key={period.key} period={period} items={plansByPeriod[period.key]} onAdd={(content) => addPlan(dateStr, period.key, content)} onToggle={(id, completed) => togglePlan(id, completed)} onDelete={deletePlan} onAddFromTask={() => setShowTaskPicker({ period: period.key })} />
+            <PeriodSection key={period.key} period={period} items={plansByPeriod[period.key]} timeBlocks={timeBlocksByPeriod[period.key]} onAdd={(content) => addPlan(dateStr, period.key, content)} onToggle={(id, completed) => togglePlan(id, completed)} onDelete={deletePlan} onAddFromTask={() => setShowTaskPicker({ period: period.key })} />
           ))}
         </motion.div>
       </DragDropContext>
@@ -115,8 +129,8 @@ export default function DailyPlannerPage() {
   )
 }
 
-function PeriodSection({ period, items, onAdd, onToggle, onDelete, onAddFromTask }: {
-  period: typeof PERIODS[0]; items: any[]; onAdd: (content: string) => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string) => void; onAddFromTask: () => void
+function PeriodSection({ period, items, timeBlocks, onAdd, onToggle, onDelete, onAddFromTask }: {
+  period: typeof PERIODS[0]; items: any[]; timeBlocks: TimeBlock[]; onAdd: (content: string) => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string) => void; onAddFromTask: () => void
 }) {
   const [newContent, setNewContent] = useState('')
   const [isAdding, setIsAdding] = useState(false)
@@ -139,7 +153,7 @@ function PeriodSection({ period, items, onAdd, onToggle, onDelete, onAddFromTask
           <button onClick={() => setIsAdding(!isAdding)} className="p-2 text-text-secondary hover:text-brand dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 btn-press shadow-none" title="添加计划"><Plus size={18} /></button>
         </div>
       </div>
-      <div className="p-4 md:p-5">
+      <div className="p-4 md:p-5 relative">
         {isAdding && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex gap-2 mb-4 overflow-hidden">
             <input ref={inputRef} value={newContent} onChange={e => setNewContent(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setIsAdding(false) }} placeholder="输入计划内容..." className="flex-1 px-4 py-2 border border-white/20 bg-bg-secondary text-text-primary rounded-xl text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all duration-200" />
@@ -147,11 +161,29 @@ function PeriodSection({ period, items, onAdd, onToggle, onDelete, onAddFromTask
             <button onClick={() => { setIsAdding(false); setNewContent('') }} className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 text-text-secondary rounded-xl text-sm font-medium hover:bg-white dark:hover:bg-gray-700 border border-black/5 dark:border-white/5 btn-press transition-all duration-200">取消</button>
           </motion.div>
         )}
+
+        {timeBlocks.length > 0 && (
+          <div className="mb-4 space-y-2">
+            {timeBlocks.map(block => (
+              <div key={block.id} className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/40 dark:bg-gray-800/40">
+                <div className="w-1.5 h-8 rounded-full shrink-0" style={{ backgroundColor: block.color || '#D97756' }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-text-primary truncate">{block.title}</p>
+                  <p className="text-[10px] md:text-xs text-text-secondary mt-0.5">{block.start_time} - {block.end_time}</p>
+                </div>
+                <div className="shrink-0 bg-white/60 dark:bg-gray-700/60 p-1.5 rounded-lg text-brand dark:text-brand">
+                  <Clock size={16} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <Droppable droppableId={period.key}>
           {(provided) => (
             <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[40px]">
               {items.length === 0 && !isAdding && (
-                <div className="text-center py-4 text-gray-400 dark:text-gray-500 absolute inset-0 flex flex-col justify-center pointer-events-none"><p className="text-sm font-medium">暂无计划</p><p className="text-xs mt-1">点击 + 添加计划</p></div>
+                <div className="text-center py-4 text-gray-400 dark:text-gray-500 flex flex-col justify-center pointer-events-none"><p className="text-sm font-medium">暂无计划</p><p className="text-xs mt-1">点击 + 添加计划</p></div>
               )}
               {items.map((item, index) => (
                 <Draggable key={item.id} draggableId={item.id} index={index}>

@@ -23,7 +23,7 @@ export default function Layout() {
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             exit={{ opacity: 0, y: -12, filter: 'blur(4px)' }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="p-4 md:p-8 pb-24 md:pb-8 w-full max-w-7xl mx-auto"
+            className="p-4 pt-20 md:pt-8 md:p-8 pb-24 md:pb-8 w-full max-w-7xl mx-auto"
           >
             <Outlet />
           </motion.main>

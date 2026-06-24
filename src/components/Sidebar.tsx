@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../lib/theme'
-import { useTheme as useThemeColor, THEMES } from '../hooks/useTheme'
+
 import { LayoutDashboard, CheckSquare, Calendar, Target, BarChart3, CalendarDays, LogOut, Sun, Moon } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -18,7 +18,6 @@ export default function Sidebar() {
   const { signOut } = useAuth()
   const location = useLocation()
   const { theme, toggle } = useTheme()
-  const { themeColor, setThemeColor } = useThemeColor()
 
   return (
     <>
@@ -35,17 +34,7 @@ export default function Sidebar() {
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
         </div>
-        <div className="px-6 py-3 border-b border-border-subtle dark:border-border-subtle flex justify-between gap-1">
-          {THEMES.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setThemeColor(t.id)}
-              className={`w-5 h-5 rounded-full transition-transform btn-press ${themeColor === t.id ? 'scale-125 ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-gray-900' : 'hover:scale-110 opacity-70 hover:opacity-100'}`}
-              style={{ backgroundColor: t.color }}
-              title={t.name}
-            />
-          ))}
-        </div>
+
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map(item => {
             const isActive = location.pathname === item.to
@@ -83,6 +72,19 @@ export default function Sidebar() {
           </button>
         </div>
       </aside>
+
+      {/* Mobile Top Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-bg-page/80 dark:bg-bg-page/80 backdrop-blur-md border-b border-border-subtle dark:border-border-subtle z-30 flex items-center justify-between px-4 transition-colors duration-300">
+        <h1 className="text-lg font-bold font-serif text-brand dark:text-brand">时间规划</h1>
+        <div className="flex items-center gap-1">
+          <button onClick={toggle} className="p-2 rounded-xl text-text-secondary hover:bg-bg-tertiary transition-colors btn-press">
+            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
+          <button onClick={signOut} className="p-2 rounded-xl text-text-secondary hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors btn-press">
+            <LogOut size={20} />
+          </button>
+        </div>
+      </div>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-bg-page dark:bg-bg-page border-t border-border-subtle dark:border-border-subtle z-30 safe-area-pb transition-colors duration-300">
         <div className="flex justify-around items-center h-[68px] px-2 relative">
