@@ -116,6 +116,7 @@ export default function PomodoroWidget() {
   return (
     <motion.div 
       ref={widgetRef}
+      id="tour-pomodoro"
       className="fixed bottom-6 right-6 z-50 touch-none flex flex-col items-end"
       drag
       dragControls={dragControls}

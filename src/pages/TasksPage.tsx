@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useTasks } from '../hooks/useTasks'
 import { Plus, Trash2, Edit3, Check, CheckSquare } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import CustomSelect from '../components/CustomSelect'
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns'
 import { motion, type Variants, AnimatePresence } from 'framer-motion'
 
@@ -151,12 +152,25 @@ export default function TasksPage() {
       )}
 
       <motion.div variants={itemVariants} className="flex gap-2 md:gap-3 mb-4 md:mb-6">
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={`px-3 py-2.5 border border-border-default glass text-text-primary rounded-xl text-xs md:text-sm min-w-0 flex-1 md:flex-none transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none font-medium`}>
-          <option value="all">全部状态</option><option value="pending">待办</option><option value="in_progress">进行中</option><option value="completed">已完成</option>
-        </select>
-        <select value={filterCategory || ''} onChange={e => setFilterCategory(e.target.value)} className={`px-3 py-2.5 border border-border-default glass text-text-primary rounded-xl text-xs md:text-sm min-w-0 flex-1 md:flex-none transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none font-medium`}>
-          <option value="all">全部分类</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <div className="flex-1 md:w-32 md:flex-none">
+          <CustomSelect 
+            value={filterStatus} 
+            onChange={val => setFilterStatus(val as string)} 
+            options={[
+              { label: '全部状态', value: 'all' },
+              { label: '待办', value: 'pending' },
+              { label: '进行中', value: 'in_progress' },
+              { label: '已完成', value: 'completed' }
+            ]} 
+          />
+        </div>
+        <div className="flex-1 md:w-32 md:flex-none">
+          <CustomSelect 
+            value={filterCategory || ''} 
+            onChange={val => setFilterCategory(val as string)} 
+            options={[{ label: '全部分类', value: 'all' }, ...categories.map(c => ({ label: c.name, value: c.id }))]} 
+          />
+        </div>
       </motion.div>
 
       {showForm && (
@@ -177,32 +191,41 @@ export default function TasksPage() {
               <button type="button" onClick={() => setFormSubtasks(p => [...p, { completed: false, text: '' }])} className="text-xs text-brand dark:text-brand font-medium hover:underline flex items-center gap-1"><Plus size={14} /> 添加子任务</button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div><label className="block text-xs font-medium text-text-secondary mb-1.5">优先级</label><select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: Number(e.target.value) as 1 | 2 | 3 | 4 }))} className={selectCls}><option value={1}>低</option><option value={2}>中</option><option value={3}>高</option><option value={4}>紧急</option></select></div>
-              <div><label className="block text-xs font-medium text-text-secondary mb-1.5">状态</label><select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as any }))} className={selectCls}><option value="pending">待办</option><option value="in_progress">进行中</option><option value="completed">已完成</option></select></div>
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">优先级</label>
+                <CustomSelect value={form.priority} onChange={val => setForm(p => ({ ...p, priority: Number(val) as 1 | 2 | 3 | 4 }))} options={[{ label: '低', value: 1 }, { label: '中', value: 2 }, { label: '高', value: 3 }, { label: '紧急', value: 4 }]} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">状态</label>
+                <CustomSelect value={form.status} onChange={val => setForm(p => ({ ...p, status: val as any }))} options={[{ label: '待办', value: 'pending' }, { label: '进行中', value: 'in_progress' }, { label: '已完成', value: 'completed' }]} />
+              </div>
               <div><label className="block text-xs font-medium text-text-secondary mb-1.5">截止日期</label><input type="date" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))} className={selectCls} /></div>
-              <div><label className="block text-xs font-medium text-text-secondary mb-1.5">分类</label><select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))} className={selectCls}><option value="">无分类</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">分类</label>
+                <CustomSelect value={form.category_id} onChange={val => setForm(p => ({ ...p, category_id: val as string }))} options={[{ label: '无分类', value: '' }, ...categories.map(c => ({ label: c.name, value: c.id }))]} />
+              </div>
             </div>
             
             <div className="pt-2 border-t border-border-default mt-4 space-y-3">
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1.5">重复设置 (仅带有截止日期时有效)</label>
-                <select value={formRecurrence.type} onChange={e => setFormRecurrence(p => ({ ...p, type: e.target.value as any }))} className={selectCls}>
-                  <option value="none">不重复</option>
-                  <option value="daily">每天</option>
-                  <option value="weekly">每周</option>
-                  <option value="monthly">每月</option>
-                  <option value="custom">自定义</option>
-                </select>
+                <CustomSelect 
+                  value={formRecurrence.type} 
+                  onChange={val => setFormRecurrence(p => ({ ...p, type: val as any }))} 
+                  options={[{ label: '不重复', value: 'none' }, { label: '每天', value: 'daily' }, { label: '每周', value: 'weekly' }, { label: '每月', value: 'monthly' }, { label: '自定义', value: 'custom' }]} 
+                />
               </div>
               {formRecurrence.type === 'custom' && (
                 <div className="flex gap-2 items-center">
                   <span className="text-sm text-text-secondary">每</span>
                   <input type="number" min="1" value={formRecurrence.interval} onChange={e => setFormRecurrence(p => ({ ...p, interval: Number(e.target.value) }))} className="w-16 px-3 py-1.5 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
-                  <select value={formRecurrence.unit} onChange={e => setFormRecurrence(p => ({ ...p, unit: e.target.value as any }))} className="w-24 px-3 py-1.5 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand focus:border-brand">
-                    <option value="days">天</option>
-                    <option value="weeks">周</option>
-                    <option value="months">月</option>
-                  </select>
+                  <div className="w-24">
+                    <CustomSelect 
+                      value={formRecurrence.unit} 
+                      onChange={val => setFormRecurrence(p => ({ ...p, unit: val as any }))} 
+                      options={[{ label: '天', value: 'days' }, { label: '周', value: 'weeks' }, { label: '月', value: 'months' }]} 
+                    />
+                  </div>
                 </div>
               )}
             </div>

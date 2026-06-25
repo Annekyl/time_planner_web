@@ -6,7 +6,7 @@ import { LayoutDashboard, CheckSquare, Calendar, Target, BarChart3, CalendarDays
 import { motion } from 'framer-motion'
 import UserGuideModal from './UserGuideModal'
 import SettingsModal from './SettingsModal'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '仪表盘' },
@@ -18,19 +18,11 @@ const navItems = [
 ]
 
 export default function Sidebar() {
-  const { user, signOut } = useAuth()
+  const { signOut } = useAuth()
   const location = useLocation()
   const { theme, toggle } = useTheme()
   const [showGuide, setShowGuide] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-
-  useEffect(() => {
-    const hasSeenGuide = localStorage.getItem(`hasSeenGuide_${user?.id}`)
-    if (user?.id && !hasSeenGuide) {
-      setShowGuide(true)
-      localStorage.setItem(`hasSeenGuide_${user?.id}`, 'true')
-    }
-  }, [user?.id])
 
   return (
     <>
@@ -57,6 +49,7 @@ export default function Sidebar() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                id={`tour-nav-${item.to === '/' ? 'dashboard' : item.to.replace('/', '')}`}
                 className={`relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors duration-300 ${
                   isActive
                     ? 'text-indigo-700 dark:text-indigo-300'
@@ -79,6 +72,7 @@ export default function Sidebar() {
         </nav>
         <div className="p-4 border-t border-border-subtle dark:border-border-subtle space-y-2">
           <button
+            id="tour-settings"
             onClick={() => setShowSettings(true)}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary dark:text-text-secondary hover:bg-gray-100/50 dark:hover:bg-gray-800/50 hover:text-text-primary dark:hover:text-gray-100 w-full transition-all duration-300 btn-press"
           >

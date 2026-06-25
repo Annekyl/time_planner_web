@@ -3,6 +3,7 @@ import { Settings } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings'
 import { BaseModal } from './BaseModal'
+import CustomSelect from './CustomSelect'
 
 export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { user } = useAuth()
@@ -92,11 +93,15 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
             <h4 className="text-sm font-bold text-text-secondary border-b border-black/5 dark:border-white/5 pb-1">界面显示</h4>
             <div className="grid grid-cols-2 gap-4 items-center">
               <label className="text-sm font-medium text-text-primary">日历时间块大小</label>
-              <select value={hourHeight} onChange={e => setHourHeight(Number(e.target.value))} className="px-3 py-2 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm">
-                <option value={32}>紧凑 (32px/小时)</option>
-                <option value={48}>标准 (48px/小时)</option>
-                <option value={64}>宽松 (64px/小时)</option>
-              </select>
+              <CustomSelect 
+                value={hourHeight} 
+                onChange={val => setHourHeight(Number(val))} 
+                options={[
+                  { label: '紧凑 (32px/小时)', value: 32 },
+                  { label: '标准 (48px/小时)', value: 48 },
+                  { label: '宽松 (64px/小时)', value: 64 }
+                ]} 
+              />
             </div>
             <div className="grid grid-cols-2 gap-4 items-center mt-3">
               <label className="text-sm font-medium text-text-primary">默认时间块时长</label>

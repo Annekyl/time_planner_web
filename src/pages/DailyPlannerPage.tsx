@@ -9,6 +9,7 @@ import { format, addDays, subDays, isToday } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { motion, type Variants, AnimatePresence } from 'framer-motion'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import CustomSelect from '../components/CustomSelect'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -248,23 +249,33 @@ export default function DailyPlannerPage() {
                 <div className="pt-2 border-t border-black/5 dark:border-white/5 space-y-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">重复设置</label>
-                    <select value={formRecurrence.type} onChange={e => setFormRecurrence(p => ({ ...p, type: e.target.value as any }))} className="w-full px-2 py-2 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm">
-                      <option value="none">不重复</option>
-                      <option value="daily">每天</option>
-                      <option value="weekly">每周</option>
-                      <option value="monthly">每月</option>
-                      <option value="custom">自定义</option>
-                    </select>
+                    <CustomSelect 
+                      value={formRecurrence.type} 
+                      onChange={val => setFormRecurrence(p => ({ ...p, type: val as any }))} 
+                      options={[
+                        { label: '不重复', value: 'none' },
+                        { label: '每天', value: 'daily' },
+                        { label: '每周', value: 'weekly' },
+                        { label: '每月', value: 'monthly' },
+                        { label: '自定义', value: 'custom' }
+                      ]} 
+                    />
                   </div>
                   {formRecurrence.type === 'custom' && (
                     <div className="flex gap-2 items-center">
                       <span className="text-sm text-gray-500">每</span>
                       <input type="number" min="1" value={formRecurrence.interval} onChange={e => setFormRecurrence(p => ({ ...p, interval: Number(e.target.value) }))} className="w-16 px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg text-sm outline-none focus:border-brand" />
-                      <select value={formRecurrence.unit} onChange={e => setFormRecurrence(p => ({ ...p, unit: e.target.value as any }))} className="w-20 px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg text-sm outline-none focus:border-brand">
-                        <option value="days">天</option>
-                        <option value="weeks">周</option>
-                        <option value="months">月</option>
-                      </select>
+                      <div className="w-24">
+                        <CustomSelect 
+                          value={formRecurrence.unit} 
+                          onChange={val => setFormRecurrence(p => ({ ...p, unit: val as any }))} 
+                          options={[
+                            { label: '天', value: 'days' },
+                            { label: '周', value: 'weeks' },
+                            { label: '月', value: 'months' }
+                          ]} 
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

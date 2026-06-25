@@ -4,6 +4,7 @@ import { useTimeBlocks } from '../hooks/useTimeBlocks'
 import { useTasks } from '../hooks/useTasks'
 import { Plus, Trash2, Clock } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import CustomSelect from '../components/CustomSelect'
 import { format, addDays, subDays } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 
@@ -49,8 +50,14 @@ export default function TimeBlocksPage() {
               <div><label className="block text-xs text-text-secondary mb-1">结束时间</label><input type="time" value={form.end_time} onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))} className={selectCls} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-xs text-text-secondary mb-1">分类</label><select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))} className={selectCls}><option value="">无分类</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-              <div><label className="block text-xs text-text-secondary mb-1">关联任务</label><select value={form.task_id} onChange={e => setForm(p => ({ ...p, task_id: e.target.value }))} className={selectCls}><option value="">无关联任务</option>{tasks.filter(t => t.status !== 'completed').map(t => <option key={t.id} value={t.id}>{t.title}</option>)}</select></div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">分类</label>
+                <CustomSelect value={form.category_id} onChange={val => setForm(p => ({ ...p, category_id: val as string }))} options={[{ label: '无分类', value: '' }, ...categories.map(c => ({ label: c.name, value: c.id }))]} />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">关联任务</label>
+                <CustomSelect value={form.task_id} onChange={val => setForm(p => ({ ...p, task_id: val as string }))} options={[{ label: '无关联任务', value: '' }, ...tasks.filter(t => t.status !== 'completed').map(t => ({ label: t.title, value: t.id }))]} />
+              </div>
             </div>
             <div className="flex gap-2"><button type="submit" className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover text-sm btn-press transition-all duration-200">添加</button><button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-text-secondary rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm btn-press transition-all duration-200">取消</button></div>
           </form>
