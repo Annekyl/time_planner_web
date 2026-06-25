@@ -114,8 +114,8 @@ export default function DashboardPage() {
 
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
-          <motion.div key="overview" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
-            <div className="glass rounded-2xl p-5 md:p-7 card-hover">
+          <motion.div key="overview" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6">
+            <div className="glass rounded-2xl p-5 md:p-7 card-hover lg:col-span-1">
               <h2 className="text-lg font-bold text-text-primary mb-4 md:mb-5 flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                   <AlertCircle size={18} className="text-amber-600 dark:text-amber-400" />
@@ -129,7 +129,7 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <div className="glass rounded-2xl p-5 md:p-7 card-hover">
+            <div className="glass rounded-2xl p-5 md:p-7 card-hover lg:col-span-1">
               <h2 className="text-lg font-bold text-text-primary mb-4 md:mb-5 flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                   <TrendingUp size={18} className="text-green-600 dark:text-green-400" />
@@ -141,6 +141,30 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-4">
                   {stats.activeGoals.slice(0, 5).map(renderGoalItem)}
+                </div>
+              )}
+            </div>
+
+            <div className="glass rounded-2xl p-5 md:p-7 card-hover lg:col-span-1">
+              <h2 className="text-lg font-bold text-text-primary mb-4 md:mb-5 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                  <Clock size={18} className="text-indigo-600 dark:text-brand" />
+                </div>
+                今日时间轴
+              </h2>
+              {stats.todayBlocks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500"><Clock size={32} className="mb-3 opacity-20" /><p className="text-sm">暂无安排，快去规划吧</p></div>
+              ) : (
+                <div className="relative pl-5 border-l-2 border-gray-100 dark:border-white/10 space-y-6 ml-2 mt-2">
+                  {stats.todayBlocks.sort((a: any, b: any) => a.start_time.localeCompare(b.start_time)).map((block: any, i: number) => (
+                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} key={block.id} className="relative">
+                      <div className="absolute -left-[27px] top-1 w-3.5 h-3.5 rounded-full border-[3px] border-bg-primary" style={{ backgroundColor: block.color || '#6366f1' }} />
+                      <div className="flex flex-col gap-0.5 -mt-1">
+                        <span className="text-xs font-bold text-brand dark:text-indigo-400">{block.start_time} - {block.end_time}</span>
+                        <span className="text-sm font-semibold text-text-primary truncate">{block.title}</span>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               )}
             </div>
@@ -173,19 +197,27 @@ export default function DashboardPage() {
         )}
 
         {activeTab === 'blocks' && (
-          <motion.div key="blocks" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="glass rounded-2xl p-5 md:p-7">
-            <h2 className="text-lg font-bold text-text-primary mb-5 flex items-center gap-2.5"><Clock size={20} className="text-amber-500" /> 今日时间块</h2>
+          <motion.div key="blocks" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="glass rounded-2xl p-5 md:p-7 max-w-3xl mx-auto">
+            <h2 className="text-lg font-bold text-text-primary mb-8 flex items-center gap-2.5"><Clock size={20} className="text-amber-500" /> 今日时间轴</h2>
               {stats.todayBlocks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500"><Clock size={32} className="mb-3 opacity-20" /><p className="text-sm">今日无时间块规划</p></div>
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500"><Clock size={48} className="mb-4 opacity-20" /><p className="text-sm font-medium">今日无时间块规划</p></div>
               ) : (
-                <div className="space-y-3">
+                <div className="relative pl-6 md:pl-8 border-l-2 border-gray-100 dark:border-white/10 space-y-8 ml-2 mt-4">
                   {stats.todayBlocks.sort((a: any, b: any) => a.start_time.localeCompare(b.start_time)).map((block: any, i: number) => (
-                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} key={block.id} className="p-4 bg-bg-secondary backdrop-blur-sm rounded-xl border border-white/20 dark:border-white/5 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] transition-all duration-300 flex flex-col gap-2 border-l-4" style={{ borderLeftColor: block.color || '#6366f1' }}>
-                    <div className="flex items-center justify-between"><span className="text-sm font-bold text-text-primary">{block.title}</span><span className="text-xs font-medium text-text-secondary bg-white dark:bg-gray-900/50 px-2 py-1 rounded-md shadow-sm">{block.start_time} - {block.end_time}</span></div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} key={block.id} className="relative">
+                      <div className="absolute -left-[31px] md:-left-[39px] top-4 w-4 h-4 rounded-full border-[3px] border-bg-primary z-10 shadow-sm" style={{ backgroundColor: block.color || '#6366f1' }} />
+                      <div className="glass p-4 md:p-5 rounded-2xl hover:-translate-y-1 transition-all duration-300 border-l-[4px] shadow-sm relative overflow-hidden group" style={{ borderLeftColor: block.color || '#6366f1' }}>
+                        <div className="absolute inset-0 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity" style={{ backgroundColor: block.color || '#6366f1' }} />
+                        <div className="flex flex-col gap-1.5 relative z-10">
+                          <span className="text-xs font-bold text-text-secondary flex items-center gap-1.5"><Clock size={12} /> {block.start_time} - {block.end_time}</span>
+                          <span className="text-base md:text-lg font-bold text-text-primary">{block.title}</span>
+                          {block.task_id && <span className="text-[10px] w-max mt-1 font-bold text-indigo-500 dark:text-brand bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">关联任务</span>}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
           </motion.div>
         )}
       </AnimatePresence>
