@@ -77,7 +77,7 @@ export default function StatsPage() {
       animate="show"
     >
       <motion.h1 variants={itemVariants} className="text-xl md:text-2xl font-bold text-text-primary mb-4 md:mb-6">数据统计</motion.h1>
-      <motion.div variants={containerVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-6 md:mb-8">
+      <motion.div variants={containerVariants} className="grid grid-cols-4 gap-2 md:gap-5 mb-6 md:mb-8">
         <StatCard icon={CheckCircle} label="已完成" value={stats.completedTasks} color="from-green-400 to-green-600" isActive={activeTab === 'completed'} onClick={() => toggleTab('completed')} />
         <StatCard icon={Clock} label="进行中" value={stats.inProgressTasks} color="from-blue-400 to-blue-600" isActive={activeTab === 'in_progress'} onClick={() => toggleTab('in_progress')} />
         <StatCard icon={BarChart3} label="完成率" value={`${stats.completionRate}%`} color="from-purple-400 to-purple-600" />
@@ -180,11 +180,16 @@ export default function StatsPage() {
 
 function StatCard({ icon: Icon, label, value, color, isActive, onClick }: { icon: any; label: string; value: string | number; color: string; isActive?: boolean; onClick?: () => void }) {
   return (
-    <motion.div variants={itemVariants} onClick={onClick} className={`glass rounded-3xl border-white/20 p-4 md:p-6 card-hover relative overflow-hidden group ${onClick ? 'cursor-pointer transition-all duration-300' : ''} ${isActive ? 'ring-1 ring-[#D6D3CD] dark:ring-[#4A4844] bg-[#F5F4EF] dark:bg-[#2A2927]' : ''}`}>
+    <motion.div variants={itemVariants} onClick={onClick} className={`glass rounded-xl md:rounded-3xl border-white/20 p-2.5 md:p-6 card-hover relative overflow-hidden group ${onClick ? 'cursor-pointer transition-all duration-300' : ''} ${isActive ? 'ring-1 ring-[#D6D3CD] dark:ring-[#4A4844] bg-[#F5F4EF] dark:bg-[#2A2927]' : ''}`}>
       <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full bg-gradient-to-br ${color} opacity-10 group-hover:opacity-20 transition-opacity duration-300 blur-xl`} />
-      <div className="flex items-center justify-between relative z-10">
-        <div><p className="text-xs md:text-sm font-bold text-text-secondary">{label}</p><p className="text-2xl md:text-3xl font-black font-serif text-text-primary mt-1 md:mt-2 tracking-tight">{value}</p></div>
-        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-none`}><Icon size={24} className="text-white" /></div>
+      <div className="flex flex-col md:flex-row items-center md:items-center md:justify-between relative z-10 text-center md:text-left">
+        <div className="w-full flex justify-center md:justify-end md:w-auto order-1 md:order-2 mb-1.5 md:mb-0">
+          <div className={`w-8 h-8 md:w-14 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-none`}><Icon size={16} className="md:w-6 md:h-6 text-white" /></div>
+        </div>
+        <div className="w-full order-2 md:order-1">
+          <p className="text-[10px] md:text-sm font-bold text-text-secondary truncate">{label}</p>
+          <p className="text-xl md:text-3xl font-black font-serif text-text-primary mt-0.5 md:mt-2 tracking-tight">{value}</p>
+        </div>
       </div>
     </motion.div>
   )

@@ -105,7 +105,7 @@ export default function DashboardPage() {
         <p className="text-text-secondary mt-2 text-sm md:text-base font-medium">欢迎回来，点击下方卡片查看详情</p>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-8 md:mb-10">
+      <motion.div variants={itemVariants} className="grid grid-cols-4 gap-2 md:gap-5 mb-8 md:mb-10">
         <StatCard icon={CheckSquare} label="待办任务" value={stats.pendingTasksCount ?? stats.pendingTasks.length} gradient="from-blue-500 to-cyan-400" shadow="shadow-blue-500/20" isActive={activeTab === 'pending'} onClick={() => toggleTab('pending')} />
         <StatCard icon={Calendar} label="今日任务" value={stats.todayTasksCount ?? stats.todayTasks.length} gradient="from-purple-500 to-pink-500" shadow="shadow-purple-500/20" isActive={activeTab === 'today'} onClick={() => toggleTab('today')} />
         <StatCard icon={Target} label="进行中目标" value={stats.activeGoalsCount ?? stats.activeGoals.length} gradient="from-green-500 to-emerald-400" shadow="shadow-green-500/20" isActive={activeTab === 'goals'} onClick={() => toggleTab('goals')} />
@@ -227,16 +227,16 @@ export default function DashboardPage() {
 
 function StatCard({ icon: Icon, label, value, gradient, isActive, onClick }: { icon: any; label: string; value: number; gradient: string; shadow: string; isActive: boolean; onClick: () => void }) {
   return (
-    <div onClick={onClick} className={`cursor-pointer glass rounded-2xl p-4 md:p-6 card-hover relative overflow-hidden group transition-all duration-300 ${isActive ? 'ring-1 ring-[#D6D3CD] dark:ring-[#4A4844] bg-[#F5F4EF] dark:bg-[#2A2927]' : ''}`}>
-      <div className="flex flex-col justify-between h-full relative z-10">
-        <div className="flex items-start justify-between mb-2">
-          <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${gradient} shadow-none flex items-center justify-center transform group-hover:rotate-6 group-hover:scale-110 transition-all duration-300`}>
-            <Icon size={20} className="text-white" />
+    <div onClick={onClick} className={`cursor-pointer glass rounded-xl md:rounded-2xl p-2.5 md:p-6 card-hover relative overflow-hidden group transition-all duration-300 ${isActive ? 'ring-1 ring-[#D6D3CD] dark:ring-[#4A4844] bg-[#F5F4EF] dark:bg-[#2A2927]' : ''}`}>
+      <div className="flex flex-col items-center md:items-start justify-between h-full relative z-10 text-center md:text-left">
+        <div className="flex items-center justify-center md:justify-start mb-1.5 md:mb-2 w-full">
+          <div className={`w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br ${gradient} shadow-none flex items-center justify-center transform group-hover:rotate-6 group-hover:scale-110 transition-all duration-300 mx-auto md:mx-0`}>
+            <Icon size={16} className="md:w-5 md:h-5 text-white" />
           </div>
         </div>
-        <div className="mt-3">
-          <p className="text-3xl md:text-4xl font-black font-serif text-text-primary tracking-tight">{value}</p>
-          <p className="text-xs md:text-sm font-medium text-text-secondary mt-1">{label}</p>
+        <div className="mt-1 md:mt-3 w-full">
+          <p className="text-xl md:text-4xl font-black font-serif text-text-primary tracking-tight">{value}</p>
+          <p className="text-[10px] md:text-sm font-medium text-text-secondary mt-0.5 md:mt-1 truncate">{label}</p>
         </div>
       </div>
     </div>
