@@ -3,7 +3,7 @@ import { Settings } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings'
 import { BaseModal } from './BaseModal'
-import CustomSelect from './CustomSelect'
+
 import CustomTimePicker from './CustomTimePicker'
 
 export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -16,7 +16,7 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
   const [afternoonEnd, setAfternoonEnd] = useState('18:00')
   const [evening, setEvening] = useState('18:00')
   const [eveningEnd, setEveningEnd] = useState('23:59')
-  const [hourHeight, setHourHeight] = useState(48)
+
   const [defaultDuration, setDefaultDuration] = useState(60)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -31,7 +31,7 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
       setAfternoonEnd(settings.afternoon_end)
       setEvening(settings.evening_start)
       setEveningEnd(settings.evening_end)
-      setHourHeight(settings.hour_height)
+      setEveningEnd(settings.evening_end)
     }
   }, [settings])
 
@@ -46,7 +46,7 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
       afternoon_end: afternoonEnd,
       evening_start: evening,
       evening_end: eveningEnd,
-      hour_height: hourHeight
+      hour_height: 80
     })
     setIsSaving(false)
     onClose()
@@ -92,18 +92,7 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
 
           <div className="space-y-3 pt-2">
             <h4 className="text-sm font-bold text-text-secondary border-b border-black/5 dark:border-white/5 pb-1">界面显示</h4>
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <label className="text-sm font-medium text-text-primary">日历时间块大小</label>
-              <CustomSelect 
-                value={hourHeight} 
-                onChange={val => setHourHeight(Number(val))} 
-                options={[
-                  { label: '紧凑 (32px/小时)', value: 32 },
-                  { label: '标准 (48px/小时)', value: 48 },
-                  { label: '宽松 (64px/小时)', value: 64 }
-                ]} 
-              />
-            </div>
+
             <div className="grid grid-cols-2 gap-4 items-center mt-3">
               <label className="text-sm font-medium text-text-primary">默认时间块时长</label>
               <div className="flex items-center gap-2">

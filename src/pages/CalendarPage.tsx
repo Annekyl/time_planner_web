@@ -29,14 +29,15 @@ export default function CalendarPage() {
   const { tasks, addTask } = useTasks(user?.id, dateRange)
   const { timeBlocks, addTimeBlock, updateTimeBlock } = useTimeBlocks(user?.id, dateRange)
   
-  const [showAddModal, setShowAddModal] = useState<false | 'task' | 'block'>(false)
+  const [showAddModal, setShowAddModal] = useState<'task' | 'block' | 'edit_block' | false>(false)
   const defaultDuration = Number(localStorage.getItem('default_block_duration') || 60)
   const addMins = (t: string, m: number) => { const [h, min] = t.split(':').map(Number); const tot = h*60 + min + m; return `${String(Math.min(23, Math.floor(tot/60))).padStart(2, '0')}:${String(tot%60).padStart(2, '0')}` }
 
   const [formTitle, setFormTitle] = useState('')
   const [formTime, setFormTime] = useState('09:00')
-  const [formEndTime, setFormEndTime] = useState(addMins('09:00', defaultDuration))
+  const [formEndTime, setFormEndTime] = useState('09:30')
   const [formColor, setFormColor] = useState('#6366f1')
+  const [editingBlock, setEditingBlock] = useState<any>(null)
 
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
@@ -78,55 +79,15 @@ export default function CalendarPage() {
       await addTask({ title: formTitle, description: '', priority: 2, status: 'pending', due_date: ds, category_id: null, completed_at: null })
     } else if (showAddModal === 'block') {
       await addTimeBlock({ title: formTitle, date: ds, start_time: formTime, end_time: formEndTime, color: formColor, category_id: null, task_id: null, completed: false })
+    } else if (showAddModal === 'edit_block' && editingBlock) {
+      await updateTimeBlock(editingBlock.id, { title: formTitle, start_time: formTime, end_time: formEndTime, color: formColor })
     }
     
     setShowAddModal(false)
     setFormTitle('')
     setFormTime('09:00')
     setFormEndTime(addMins('09:00', defaultDuration))
-  }
-
-  const handleDropEvent = async (payload: any, targetDay: Date, targetInterval: string) => {
-    if (payload.type === 'block') {
-      const [sH, sM] = payload.start.split(':').map(Number)
-      const [eH, eM] = payload.end.split(':').map(Number)
-      const durationMins = (eH * 60 + eM) - (sH * 60 + sM)
-      
-      const [tH, tM] = targetInterval.split(':').map(Number)
-      const newStartMins = tH * 60 + tM
-      const newEndMins = newStartMins + durationMins
-      
-      const newStartStr = `${String(Math.floor(newStartMins/60)).padStart(2, '0')}:${String(newStartMins%60).padStart(2, '0')}`
-      const newEndStr = `${String(Math.min(23, Math.floor(newEndMins/60))).padStart(2, '0')}:${String(newEndMins%60).padStart(2, '0')}`
-
-      await updateTimeBlock(payload.id, {
-        date: format(targetDay, 'yyyy-MM-dd'),
-        start_time: newStartStr,
-        end_time: newEndStr
-      })
-    } else if (payload.type === 'task') {
-      const task = tasks.find(t => t.id === payload.id)
-      if (!task) return
-      const randomColor = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]
-      
-      const [tH, tM] = targetInterval.split(':').map(Number)
-      const newStartMins = tH * 60 + tM
-      const newEndMins = newStartMins + defaultDuration
-      
-      const newStartStr = `${String(Math.floor(newStartMins/60)).padStart(2, '0')}:${String(newStartMins%60).padStart(2, '0')}`
-      const newEndStr = `${String(Math.min(23, Math.floor(newEndMins/60))).padStart(2, '0')}:${String(newEndMins%60).padStart(2, '0')}`
-
-      await addTimeBlock({
-        title: task.title,
-        date: format(targetDay, 'yyyy-MM-dd'),
-        start_time: newStartStr,
-        end_time: newEndStr,
-        color: randomColor,
-        category_id: task.category_id,
-        task_id: task.id,
-        completed: false
-      })
-    }
+    setEditingBlock(null)
   }
 
   const openModal = (type: 'task' | 'block', date?: Date, defaultTime?: string) => {
@@ -145,6 +106,15 @@ export default function CalendarPage() {
       setFormTime('09:00')
       setFormEndTime(addMins('09:00', defaultDuration))
     }
+  }
+
+  const openEditModal = (block: any) => {
+    setEditingBlock(block)
+    setFormTitle(block.title)
+    setFormTime(block.start_time)
+    setFormEndTime(block.end_time)
+    setFormColor(block.color)
+    setShowAddModal('edit_block')
   }
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -196,15 +166,15 @@ export default function CalendarPage() {
       </div>
 
       {viewMode === 'month' && <MonthView days={monthDays} currentMonth={selectedDate} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} />}
-      {viewMode === 'week' && <WeekView days={weekDays} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} onDropEvent={handleDropEvent} timeIntervals={timeIntervals} hourHeight={settings.hour_height || 48} defaultDuration={defaultDuration} settings={settings} />}
-      {viewMode === 'day' && <DayView date={selectedDate} events={getEventsForDay(selectedDate)} onAddEvent={openModal} onDropEvent={handleDropEvent} timeIntervals={timeIntervals} hourHeight={settings.hour_height || 48} defaultDuration={defaultDuration} settings={settings} />}
+      {viewMode === 'week' && <WeekView days={weekDays} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} onEditEvent={openEditModal} timeIntervals={timeIntervals} hourHeight={80} defaultDuration={defaultDuration} settings={settings} />}
+      {viewMode === 'day' && <DayView date={selectedDate} events={getEventsForDay(selectedDate)} onAddEvent={openModal} onEditEvent={openEditModal} timeIntervals={timeIntervals} hourHeight={80} defaultDuration={defaultDuration} settings={settings} />}
 
       <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 pt-20 md:pt-4 bg-black/20 backdrop-blur-sm" onClick={() => setShowAddModal(false)}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="glass w-full max-w-md p-5 md:p-6 relative max-h-[85dvh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"><X size={20} /></button>
-              <h3 className="text-lg font-bold font-serif text-text-primary mb-4">{showAddModal === 'task' ? '添加任务' : '添加时间块'}</h3>
+              <h3 className="text-lg font-bold font-serif text-text-primary mb-4">{showAddModal === 'task' ? '添加任务' : showAddModal === 'edit_block' ? '编辑时间块' : '添加时间块'}</h3>
               
               <form onSubmit={handleAddSubmit} className="space-y-4">
                 <div>
@@ -212,7 +182,7 @@ export default function CalendarPage() {
                   <input autoFocus value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder={showAddModal === 'task' ? "例如: 整理周报" : "例如: 深度工作"} className="w-full px-3 py-2 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-indigo-500 outline-none text-sm" required />
                 </div>
                 
-                {showAddModal === 'block' && (
+                {(showAddModal === 'block' || showAddModal === 'edit_block') && (
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">开始时间</label>
@@ -259,8 +229,9 @@ function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsFo
   )
 }
 
-function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent, onDropEvent, timeIntervals, hourHeight, defaultDuration, settings }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onDropEvent: (payload: any, d: Date, interval: string) => void; timeIntervals: string[]; hourHeight: number; defaultDuration: number; settings: any }) {
+function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent, onEditEvent, timeIntervals, hourHeight, defaultDuration, settings }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onEditEvent: (block: any) => void; timeIntervals: string[]; hourHeight: number; defaultDuration: number; settings: any }) {
   const [activeCell, setActiveCell] = useState<{ day: string, interval: string } | null>(null)
+  const [activeEventId, setActiveEventId] = useState<string | null>(null)
   
   const timeToMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
   const minsToTime = (mins: number) => `${Math.floor(mins/60).toString().padStart(2, '0')}:${(mins%60).toString().padStart(2, '0')}`
@@ -335,7 +306,7 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
 
   return (
     <div className="glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
-      <div className="overflow-y-auto max-h-[600px] relative">
+      <div className="relative">
         <div className="sticky top-0 z-20 grid grid-cols-[3rem_repeat(7,1fr)] md:grid-cols-[4rem_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700/50 bg-white/95 dark:bg-[#1A1918]/95 backdrop-blur-md shadow-sm">
           <div className="w-12 md:w-16" />
           {days.map(day => { const selected = isSameDay(day, selectedDate); const today = isToday(day); return (
@@ -409,12 +380,6 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
                       <div 
                         className={`relative shrink-0 transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
                         style={{ height: `${cellHeight}px` }}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const data = e.dataTransfer.getData('application/json');
-                          if (data) onDropEvent(JSON.parse(data), day, interval);
-                        }}
                         onClick={() => {
                           if (isActive) {
                             onAddEvent('block', day, interval);
@@ -424,6 +389,11 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
                           }
                         }}
                       >
+                        {isActive && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Plus className="text-brand opacity-80" size={24} />
+                          </div>
+                        )}
                       </div>
                     </React.Fragment>
                   )
@@ -432,7 +402,31 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
               {events.blocks.map(block => { 
                 const style = getBlockStyle(block);
                 if (style.display === 'none') return null;
-                return <div key={block.id} draggable onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('application/json', JSON.stringify({ type: 'block', id: block.id, start: block.start_time, end: block.end_time })) }} className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in shadow-sm cursor-grab active:cursor-grabbing hover:z-10 ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...style, backgroundColor: block.color }}><p className="font-medium truncate">{block.title}</p></div> 
+                const isSelected = activeEventId === block.id;
+                return (
+                  <div 
+                    key={block.id} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isSelected) {
+                        onEditEvent(block);
+                        setActiveEventId(null);
+                      } else {
+                        setActiveEventId(block.id);
+                        setActiveCell(null);
+                      }
+                    }} 
+                    className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in shadow-sm cursor-pointer hover:z-10 transition-all ${block.completed ? 'opacity-60 line-through' : ''} ${isSelected ? 'ring-2 ring-white ring-inset shadow-md scale-[1.02] z-20' : ''}`} 
+                    style={{ ...style, backgroundColor: block.color }}
+                  >
+                    <p className="font-medium truncate">{block.title}</p>
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-black/10 flex items-center justify-center backdrop-blur-[1px]">
+                        <span className="opacity-90 font-bold tracking-widest uppercase drop-shadow-md">+</span>
+                      </div>
+                    )}
+                  </div>
+                )
               })}
               {events.tasks.length > 0 && <div className="absolute bottom-1 left-0.5 right-0.5 flex flex-col gap-0.5 pointer-events-none">{events.tasks.slice(0, 2).map(t => <div key={t.id} className="bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded px-1 py-0.5 text-[9px] truncate">{t.title}</div>)}{events.tasks.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500 px-1 font-medium">+{events.tasks.length - 2}</div>}</div>}
             </div>
@@ -443,10 +437,11 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
   )
 }
 
-function DayView({ date, events, onAddEvent, onDropEvent, timeIntervals, hourHeight, defaultDuration, settings }: { date: Date; events: { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onDropEvent: (payload: any, d: Date, interval: string) => void; timeIntervals: string[]; hourHeight: number; defaultDuration: number; settings: any }) {
+function DayView({ date, events, onAddEvent, onEditEvent, timeIntervals, hourHeight, defaultDuration, settings }: { date: Date; events: { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onEditEvent: (block: any) => void; timeIntervals: string[]; hourHeight: number; defaultDuration: number; settings: any }) {
   const timeToMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
   const minsToTime = (mins: number) => `${Math.floor(mins/60).toString().padStart(2, '0')}:${(mins%60).toString().padStart(2, '0')}`
   const gapHeight = 32;
+  const [activeEventId, setActiveEventId] = useState<string | null>(null)
 
   const getIntervalEnd = (idx: number) => {
     const iStart = timeToMins(timeIntervals[idx]);
@@ -520,8 +515,8 @@ function DayView({ date, events, onAddEvent, onDropEvent, timeIntervals, hourHei
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
       <div className="md:col-span-2 glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
-        <div className="overflow-y-auto max-h-[600px]"><div className="flex relative">
-          <div className="flex flex-col border-r border-border-subtle bg-bg-secondary/50">
+        <div className="relative"><div className="flex relative">
+          <div className="flex flex-col w-12 md:w-16 shrink-0 border-r border-border-subtle bg-bg-secondary/50">
             {timeIntervals.map((interval, idx) => {
               const iStart = timeToMins(interval);
               const iEnd = getIntervalEnd(idx);
@@ -581,12 +576,6 @@ function DayView({ date, events, onAddEvent, onDropEvent, timeIntervals, hourHei
                     <div 
                       className={`relative shrink-0 transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
                       style={{ height: `${cellHeight}px` }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const data = e.dataTransfer.getData('application/json');
-                        if (data) onDropEvent(JSON.parse(data), date, interval);
-                      }}
                       onClick={() => {
                         if (isActive) {
                           onAddEvent('block', date, interval);
@@ -609,7 +598,32 @@ function DayView({ date, events, onAddEvent, onDropEvent, timeIntervals, hourHei
               {events.blocks.map(block => { 
                 const style = getBlockStyle(block);
                 if (style.display === 'none') return null;
-                return <div key={block.id} draggable onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('application/json', JSON.stringify({ type: 'block', id: block.id, start: block.start_time, end: block.end_time })) }} className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in shadow-sm cursor-grab active:cursor-grabbing hover:z-10 ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...style, backgroundColor: block.color }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> 
+                const isSelected = activeEventId === block.id;
+                return (
+                  <div 
+                    key={block.id} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isSelected) {
+                        onEditEvent(block);
+                        setActiveEventId(null);
+                      } else {
+                        setActiveEventId(block.id);
+                        setActiveCell(null);
+                      }
+                    }} 
+                    className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in shadow-sm cursor-pointer hover:z-10 transition-all ${block.completed ? 'opacity-60 line-through' : ''} ${isSelected ? 'ring-2 ring-white ring-inset shadow-md scale-[1.02] z-20' : ''}`} 
+                    style={{ ...style, backgroundColor: block.color }}
+                  >
+                    <p className="font-medium">{block.title}</p>
+                    <p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p>
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-black/10 flex items-center justify-center backdrop-blur-[1px]">
+                        <span className="opacity-90 font-bold tracking-widest uppercase drop-shadow-md">+</span>
+                      </div>
+                    )}
+                  </div> 
+                )
             })}
           </div>
         </div></div>
