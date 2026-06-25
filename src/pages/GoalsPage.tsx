@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useGoals } from '../hooks/useGoals'
 import { Plus, Trash2, Edit3, Target, CheckCircle, XCircle } from 'lucide-react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
-import { motion, type Variants } from 'framer-motion'
+import { motion, type Variants, AnimatePresence } from 'framer-motion'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -20,6 +21,7 @@ export default function GoalsPage() {
   const { goals, addGoal, updateGoal, deleteGoal } = useGoals(user?.id)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean, id: string, title: string }>({ isOpen: false, id: '', title: '' })
   const [form, setForm] = useState({ title: '', description: '', target_date: '', progress: 0, status: 'active' as 'active' | 'completed' | 'abandoned' })
   const resetForm = () => { setForm({ title: '', description: '', target_date: '', progress: 0, status: 'active' }); setShowForm(false); setEditingId(null) }
   const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); const data = { ...form, target_date: form.target_date || null }; if (editingId) await updateGoal(editingId, data); else await addGoal(data); resetForm() }
@@ -41,8 +43,9 @@ export default function GoalsPage() {
         <button onClick={() => { resetForm(); setShowForm(true) }} className="px-4 py-2.5 bg-brand text-white rounded-xl hover:bg-brand-hover transition-all duration-200 flex items-center gap-2 text-sm font-medium shadow-none btn-press"><Plus size={18} /><span className="hidden sm:inline">新建目标</span><span className="sm:hidden">新建</span></button>
       </motion.div>
 
+      <AnimatePresence>
       {showForm && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="glass rounded-2xl p-5 md:p-6 mb-6 md:mb-8 overflow-hidden">
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="glass rounded-2xl p-5 md:p-6 mb-6 md:mb-8 overflow-hidden">
           <h3 className="font-bold text-text-primary mb-4 text-sm md:text-base">{editingId ? '编辑目标' : '新建目标'}</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="目标标题" className={inputCls} required />
@@ -55,6 +58,7 @@ export default function GoalsPage() {
           </form>
         </motion.div>
       )}
+      </AnimatePresence>
 
       <motion.div variants={itemVariants} className="mb-8 md:mb-10">
         <h2 className="text-lg font-bold text-text-secondary mb-4 flex items-center gap-2.5"><Target size={20} className="text-indigo-500" />进行中 ({activeGoals.length})</h2>
@@ -67,7 +71,7 @@ export default function GoalsPage() {
                   <div className="flex gap-1 shrink-0 bg-white/40 dark:bg-gray-800/40 rounded-xl p-1 shadow-sm border border-white/10">
                     <button onClick={() => handleComplete(goal)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-green-600 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press" title="标记完成"><CheckCircle size={18} /></button>
                     <button onClick={() => handleEdit(goal)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-brand hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press"><Edit3 size={18} /></button>
-                    <button onClick={() => deleteGoal(goal.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press"><Trash2 size={18} /></button>
+                    <button onClick={() => setDeleteConfirm({ isOpen: true, id: goal.id, title: goal.title })} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press"><Trash2 size={18} /></button>
                   </div>
                 </div>
                 {goal.target_date ? (() => {
@@ -101,7 +105,7 @@ export default function GoalsPage() {
                   <div className="min-w-0 flex-1 mr-3"><h3 className="font-bold text-text-primary text-lg line-through">{goal.title}</h3>{goal.description && <p className="text-xs font-medium text-text-secondary mt-1 line-clamp-2">{goal.description}</p>}</div>
                   <div className="flex gap-1 shrink-0 bg-white/40 dark:bg-gray-800/40 rounded-xl p-1 shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button onClick={() => handleComplete(goal)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-amber-600 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press" title="重新打开"><XCircle size={18} /></button>
-                    <button onClick={() => deleteGoal(goal.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press"><Trash2 size={18} /></button>
+                    <button onClick={() => setDeleteConfirm({ isOpen: true, id: goal.id, title: goal.title })} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press"><Trash2 size={18} /></button>
                   </div>
                 </div>
                 {goal.target_date ? (
@@ -120,6 +124,17 @@ export default function GoalsPage() {
           </motion.div>
         )}
       </motion.div>
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title="删除目标"
+        message={`确定要删除目标"${deleteConfirm.title}"吗？此操作无法撤销。`}
+        onConfirm={() => {
+          deleteGoal(deleteConfirm.id)
+          setDeleteConfirm({ ...deleteConfirm, isOpen: false })
+        }}
+        onCancel={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })}
+      />
     </motion.div>
   )
 }

@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useTimeBlocks } from '../hooks/useTimeBlocks'
 import { useTasks } from '../hooks/useTasks'
 import { Plus, Trash2, Clock } from 'lucide-react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { format, addDays, subDays } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 
@@ -15,6 +16,7 @@ export default function TimeBlocksPage() {
   const { tasks, categories } = useTasks(user?.id)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showForm, setShowForm] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean, id: string, title: string }>({ isOpen: false, id: '', title: '' })
   const [form, setForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), start_time: '09:00', end_time: '10:00', category_id: '', task_id: '', color: '#3b82f6' })
   const dateStr = format(selectedDate, 'yyyy-MM-dd')
   const dayBlocks = useMemo(() => timeBlocks.filter(b => b.date === dateStr).sort((a, b) => a.start_time.localeCompare(b.start_time)), [timeBlocks, dateStr])
@@ -57,10 +59,20 @@ export default function TimeBlocksPage() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3 md:p-6 overflow-x-auto fade-in" style={{ animationDelay: '0.1s' }}>
         <div className="relative min-w-[320px]" style={{ height: `${HOURS.length * HOUR_HEIGHT}px` }}>
           {HOURS.map(hour => <div key={hour} className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-700/50" style={{ top: `${(hour - 6) * HOUR_HEIGHT}px` }}><span className="absolute -top-3 left-0 text-[10px] md:text-xs text-text-secondary w-10 md:w-12">{String(hour).padStart(2, '0')}:00</span></div>)}
-          {dayBlocks.map((block, i) => <div key={block.id} className="absolute left-12 md:left-14 right-2 md:right-4 rounded-lg p-1.5 md:p-2 text-white text-xs md:text-sm overflow-hidden group fade-in" style={{ ...getBlockStyle(block), backgroundColor: block.color, animationDelay: `${i * 0.05}s` }}><div className="flex items-start justify-between"><div className="min-w-0 flex-1"><p className="font-medium truncate">{block.title}</p><p className="opacity-80">{block.start_time} - {block.end_time}</p></div><button onClick={() => deleteTimeBlock(block.id)} className="p-1 hover:border-border-default rounded transition-all duration-200 shrink-0 md:opacity-0 md:group-hover:opacity-100 btn-press"><Trash2 size={12} /></button></div></div>)}
+          {dayBlocks.map((block, i) => <div key={block.id} className="absolute left-12 md:left-14 right-2 md:right-4 rounded-lg p-1.5 md:p-2 text-white text-xs md:text-sm overflow-hidden group fade-in" style={{ ...getBlockStyle(block), backgroundColor: block.color, animationDelay: `${i * 0.05}s` }}><div className="flex items-start justify-between"><div className="min-w-0 flex-1"><p className="font-medium truncate">{block.title}</p><p className="opacity-80">{block.start_time} - {block.end_time}</p></div><button onClick={() => setDeleteConfirm({ isOpen: true, id: block.id, title: block.title })} className="p-1 hover:border-border-default rounded transition-all duration-200 shrink-0 md:opacity-0 md:group-hover:opacity-100 btn-press"><Trash2 size={12} /></button></div></div>)}
           {dayBlocks.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-gray-300 dark:text-gray-600 fade-in"><div className="text-center"><Clock size={48} className="mx-auto mb-2 opacity-30" /><p className="text-sm">点击上方按钮添加时间块</p></div></div>}
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title="删除时间块"
+        message={`确定要删除时间块"${deleteConfirm.title}"吗？此操作无法撤销。`}
+        onConfirm={() => {
+          deleteTimeBlock(deleteConfirm.id)
+          setDeleteConfirm({ ...deleteConfirm, isOpen: false })
+        }}
+        onCancel={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })}
+      />
     </div>
   )
 }

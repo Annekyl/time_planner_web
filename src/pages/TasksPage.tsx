@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasks } from '../hooks/useTasks'
 import { Plus, Trash2, Edit3, Check, CheckSquare } from 'lucide-react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns'
-import { motion, type Variants } from 'framer-motion'
+import { motion, type Variants, AnimatePresence } from 'framer-motion'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -19,8 +20,9 @@ export default function TasksPage() {
   const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9']
   const { user } = useAuth()
   const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterCategory, setFilterCategory] = useState<string>('all')
-  const { tasks, categories, hasMore, loadMore, loading, addTask, updateTask, deleteTask, addCategory, updateCategory, deleteCategory } = useTasks(user?.id, { paginate: true, status: filterStatus, categoryId: filterCategory })
+  const [filterCategory, setFilterCategory] = useState<string | null>('all')
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean, type: 'task' | 'category', id: string, title: string }>({ isOpen: false, type: 'task', id: '', title: '' })
+  const { tasks, categories, hasMore, loadMore, loading, addTask, updateTask, deleteTask, addCategory, updateCategory, deleteCategory } = useTasks(user?.id, { paginate: true, status: filterStatus, categoryId: filterCategory === 'all' ? undefined : (filterCategory || undefined) })
   const [showForm, setShowForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -140,7 +142,7 @@ export default function TasksPage() {
                 {c.name}
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1 -mr-1">
                   <button type="button" onClick={() => { setCatForm({ id: c.id, name: c.name, color: c.color }); setShowCategoryForm(true); }} className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded"><Edit3 size={12} /></button>
-                  <button type="button" onClick={async () => { if(confirm('确定要删除分类吗？相关的任务将失去分类。')) await deleteCategory(c.id); }} className="p-0.5 hover:bg-red-500/20 text-red-500 rounded"><Trash2 size={12} /></button>
+                  <button type="button" onClick={() => setDeleteConfirm({ isOpen: true, type: 'category', id: c.id, title: c.name })} className="p-0.5 hover:bg-red-500/20 text-red-500 rounded"><Trash2 size={12} /></button>
                 </div>
               </motion.span>
             ))}
@@ -152,7 +154,7 @@ export default function TasksPage() {
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={`px-3 py-2.5 border border-border-default glass text-text-primary rounded-xl text-xs md:text-sm min-w-0 flex-1 md:flex-none transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none font-medium`}>
           <option value="all">全部状态</option><option value="pending">待办</option><option value="in_progress">进行中</option><option value="completed">已完成</option>
         </select>
-        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={`px-3 py-2.5 border border-border-default glass text-text-primary rounded-xl text-xs md:text-sm min-w-0 flex-1 md:flex-none transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none font-medium`}>
+        <select value={filterCategory || ''} onChange={e => setFilterCategory(e.target.value)} className={`px-3 py-2.5 border border-border-default glass text-text-primary rounded-xl text-xs md:text-sm min-w-0 flex-1 md:flex-none transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none font-medium`}>
           <option value="all">全部分类</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </motion.div>
@@ -212,50 +214,70 @@ export default function TasksPage() {
         </motion.div>
       )}
 
-      <motion.div className="space-y-3" variants={containerVariants}>
-        {tasks.map((task) => (
-          <motion.div key={task.id} variants={itemVariants} className={`glass rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] group ${task.status === 'completed' ? 'opacity-60 bg-white/30 dark:bg-gray-800/30' : ''}`}>
-            <button onClick={() => handleToggleComplete(task)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 checkbox-bounce ${task.status === 'completed' ? 'bg-green-500 border-green-500 scale-110' : 'border-gray-300 dark:border-gray-500 hover:border-indigo-500'}`}>{task.status === 'completed' && <Check size={12} className="text-white" />}</button>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-sm font-bold transition-all duration-200 ${task.status === 'completed' ? 'line-through text-gray-400 dark:text-gray-500' : 'text-text-primary group-hover:text-brand dark:group-hover:text-indigo-400'}`}>{task.title}</span>
-                {task.recurrence_rule && <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-md font-medium border border-border-default bg-bg-tertiary text-text-secondary">🔁 重复</span>}
-                {task.category && <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-md font-medium border border-white/10" style={{ backgroundColor: task.category.color + '20', color: task.category.color }}>{task.category.name}</span>}
+      <AnimatePresence>
+        <motion.div className="space-y-3" variants={containerVariants}>
+          {tasks.map((task) => (
+            <motion.div key={task.id} variants={itemVariants} className={`glass rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] group ${task.status === 'completed' ? 'opacity-60 bg-white/30 dark:bg-gray-800/30' : ''}`}>
+              <button onClick={() => handleToggleComplete(task)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 checkbox-bounce ${task.status === 'completed' ? 'bg-green-500 border-green-500 scale-110' : 'border-gray-300 dark:border-gray-500 hover:border-indigo-500'}`}>{task.status === 'completed' && <Check size={12} className="text-white" />}</button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-sm font-bold transition-all duration-200 ${task.status === 'completed' ? 'line-through text-gray-400 dark:text-gray-500' : 'text-text-primary group-hover:text-brand dark:group-hover:text-indigo-400'}`}>{task.title}</span>
+                  {task.recurrence_rule && <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-md font-medium border border-border-default bg-bg-tertiary text-text-secondary">🔁 重复</span>}
+                  {task.category && <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-md font-medium border border-white/10" style={{ backgroundColor: task.category.color + '20', color: task.category.color }}>{task.category.name}</span>}
+                </div>
+                {(() => {
+                  const parsed = parseDescription(task.description || '');
+                  return (
+                    <div className="mt-1">
+                      {parsed.description && <p className="text-xs font-medium text-text-secondary truncate">{parsed.description}</p>}
+                      {parsed.subtasks.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {parsed.subtasks.map((st, idx) => (
+                            <div key={idx} className="flex items-center gap-2 group/st">
+                              <button onClick={() => handleToggleSubtask(task, idx)} className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border ${st.completed ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 dark:border-gray-500'}`}>{st.completed && <Check size={10} className="text-white" />}</button>
+                              <span className={`text-xs ${st.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300'}`}>{st.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
-              {(() => {
-                const parsed = parseDescription(task.description || '');
-                return (
-                  <div className="mt-1">
-                    {parsed.description && <p className="text-xs font-medium text-text-secondary truncate">{parsed.description}</p>}
-                    {parsed.subtasks.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {parsed.subtasks.map((st, idx) => (
-                          <div key={idx} className="flex items-center gap-2 group/st">
-                            <button onClick={() => handleToggleSubtask(task, idx)} className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border ${st.completed ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 dark:border-gray-500'}`}>{st.completed && <Check size={10} className="text-white" />}</button>
-                            <span className={`text-xs ${st.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300'}`}>{st.text}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[10px] md:text-xs px-2 py-1 rounded-md font-medium ${priorityColor[task.priority]}`}>{priorityLabel[task.priority]}</span>
+                {task.due_date && <span className="text-[10px] md:text-xs font-medium text-text-secondary bg-black/5 dark:bg-white/5 px-2 py-1 rounded-md hidden sm:inline">{format(parseISO(task.due_date), 'M/d')}</span>}
+                <button onClick={() => handleEdit(task)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-brand hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 btn-press"><Edit3 size={16} /></button>
+                <button onClick={() => setDeleteConfirm({ isOpen: true, type: 'task', id: task.id, title: task.title })} className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 btn-press"><Trash2 size={16} /></button>
+              </div>
+            </motion.div>
+          ))}
+          {tasks.length === 0 && !loading && <motion.div variants={itemVariants} className="text-center py-16 text-gray-400 dark:text-gray-500"><CheckSquare size={48} className="mx-auto mb-4 opacity-20" /><p className="font-medium text-sm">暂无任务</p></motion.div>}
+          {hasMore && (
+            <div ref={loaderRef} className="py-6 flex justify-center items-center">
+              <div className="w-6 h-6 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className={`text-[10px] md:text-xs px-2 py-1 rounded-md font-medium ${priorityColor[task.priority]}`}>{priorityLabel[task.priority]}</span>
-              {task.due_date && <span className="text-[10px] md:text-xs font-medium text-text-secondary bg-black/5 dark:bg-white/5 px-2 py-1 rounded-md hidden sm:inline">{format(parseISO(task.due_date), 'M/d')}</span>}
-              <button onClick={() => handleEdit(task)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-brand hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 btn-press"><Edit3 size={16} /></button>
-              <button onClick={() => deleteTask(task.id)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 btn-press"><Trash2 size={16} /></button>
-            </div>
-          </motion.div>
-        ))}
-        {tasks.length === 0 && !loading && <motion.div variants={itemVariants} className="text-center py-16 text-gray-400 dark:text-gray-500"><CheckSquare size={48} className="mx-auto mb-4 opacity-20" /><p className="font-medium text-sm">暂无任务</p></motion.div>}
-        {hasMore && (
-          <div ref={loaderRef} className="py-6 flex justify-center items-center">
-            <div className="w-6 h-6 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
-          </div>
-        )}
-      </motion.div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title={deleteConfirm.type === 'category' ? '删除分类' : '删除任务'}
+        message={deleteConfirm.type === 'category' 
+          ? `确定要删除分类"${deleteConfirm.title}"吗？这不会删除相关的任务，但会移除它们的分类标签。` 
+          : `确定要删除任务"${deleteConfirm.title}"吗？此操作无法撤销。`}
+        onConfirm={() => {
+          if (deleteConfirm.type === 'category') {
+            deleteCategory(deleteConfirm.id)
+            if (filterCategory === deleteConfirm.id) setFilterCategory('all')
+          } else {
+            deleteTask(deleteConfirm.id)
+          }
+          setDeleteConfirm({ ...deleteConfirm, isOpen: false })
+        }}
+        onCancel={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })}
+      />
     </motion.div>
   )
 }

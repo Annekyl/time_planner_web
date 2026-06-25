@@ -8,6 +8,7 @@ import { Sun, CloudSun, Moon, Plus, Trash2, Check, ChevronLeft, ChevronRight, Ca
 import { format, addDays, subDays, isToday } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { motion, type Variants, AnimatePresence } from 'framer-motion'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -41,6 +42,7 @@ export default function DailyPlannerPage() {
   const { tasks } = useTasks(user?.id, { incompleteOnly: true })
   const { timeBlocks, addTimeBlock, toggleTimeBlock, deleteTimeBlock } = useTimeBlocks(user?.id, { startDate: dateStr, endDate: dateStr })
   const [showTaskPicker, setShowTaskPicker] = useState<{ period: Period } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean, id: string, title: string }>({ isOpen: false, id: '', title: '' })
   
   // Modal State
   const [showAddModal, setShowAddModal] = useState<Period | null>(null)
@@ -180,7 +182,7 @@ export default function DailyPlannerPage() {
             timeBlocks={timeBlocksByPeriod[period.key]} 
             onAdd={() => openModal(period.key)} 
             onToggle={toggleTimeBlock} 
-            onDelete={deleteTimeBlock} 
+            onDelete={(id, title) => setDeleteConfirm({ isOpen: true, id, title })} 
             onAddFromTask={() => setShowTaskPicker({ period: period.key })} 
           />
         ))}
@@ -246,12 +248,23 @@ export default function DailyPlannerPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title="删除时间块"
+        message={`确定要删除时间块"${deleteConfirm.title}"吗？此操作无法撤销。`}
+        onConfirm={() => {
+          deleteTimeBlock(deleteConfirm.id)
+          setDeleteConfirm({ ...deleteConfirm, isOpen: false })
+        }}
+        onCancel={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })}
+      />
     </motion.div>
   )
 }
 
 function PeriodSection({ period, timeBlocks, onAdd, onToggle, onDelete, onAddFromTask }: {
-  period: PeriodDef; timeBlocks: TimeBlock[]; onAdd: () => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string) => void; onAddFromTask: () => void
+  period: PeriodDef; timeBlocks: TimeBlock[]; onAdd: () => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string, title: string) => void; onAddFromTask: () => void
 }) {
   const Icon = period.icon
   const completedCount = timeBlocks.filter(i => i.completed).length
@@ -297,7 +310,7 @@ function PeriodSection({ period, timeBlocks, onAdd, onToggle, onDelete, onAddFro
 
                 {block.task_id && <span className="text-[10px] font-bold text-indigo-500 dark:text-brand bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md shrink-0">任务</span>}
                 
-                <button onClick={() => onDelete(block.id)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all duration-200 shrink-0 opacity-0 group-hover:opacity-100 btn-press"><Trash2 size={14} /></button>
+                <button onClick={() => onDelete(block.id, block.title)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all duration-200 shrink-0 opacity-0 group-hover:opacity-100 btn-press"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>
