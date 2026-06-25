@@ -4,9 +4,11 @@ import Sidebar from './Sidebar'
 import { motion, AnimatePresence } from 'framer-motion'
 import PomodoroWidget from './PomodoroWidget'
 import CommandPalette from './CommandPalette'
+import { useRealtimeSync } from '../hooks/useRealtimeSync'
 
 export default function Layout() {
   const location = useLocation()
+  useRealtimeSync()
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })

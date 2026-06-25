@@ -1,30 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
 
 export function useDashboard(userId: string | undefined) {
-  const [dashboardData, setDashboardData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [rpcError, setRpcError] = useState<string | null>(null)
+  const { data: dashboardData = null, isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['dashboard', userId],
+    queryFn: async () => {
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      const { data, error } = await supabase.rpc('get_dashboard_data', { user_uuid: userId, current_date_str: todayStr })
+      if (error) throw error
+      return data
+    },
+    enabled: !!userId,
+  })
 
-  const fetchDashboardData = async () => {
-    if (!userId) return
-    const todayStr = format(new Date(), 'yyyy-MM-dd')
-    const { data, error } = await supabase.rpc('get_dashboard_data', { user_uuid: userId, current_date_str: todayStr })
-    if (!error && data) {
-      setDashboardData(data)
-    } else if (error) {
-      console.error("RPC Error:", error)
-      setRpcError(error.message)
-    }
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    if (userId) {
-      fetchDashboardData()
-    }
-  }, [userId])
-
-  return { dashboardData, loading, rpcError, refetch: fetchDashboardData }
+  return { dashboardData, loading, rpcError: error ? error.message : null, refetch }
 }
