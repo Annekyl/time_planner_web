@@ -19,6 +19,11 @@ export interface Task {
   created_at: string
   updated_at: string
   category?: Category
+  recurrence_rule?: {
+    type: 'daily' | 'weekly' | 'monthly' | 'custom'
+    interval?: number
+    unit?: 'days' | 'weeks' | 'months'
+  } | null
 }
 
 export interface Goal {
@@ -47,6 +52,11 @@ export interface TimeBlock {
   created_at: string
   category?: Category
   task?: Task
+  recurrence_rule?: {
+    type: 'daily' | 'weekly' | 'monthly' | 'custom'
+    interval?: number
+    unit?: 'days' | 'weeks' | 'months'
+  } | null
 }
 
 export interface User {

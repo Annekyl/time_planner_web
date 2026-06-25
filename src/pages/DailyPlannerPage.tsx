@@ -41,6 +41,7 @@ export default function DailyPlannerPage() {
   const [formEndTime, setFormEndTime] = useState('10:00')
   const [formColor, setFormColor] = useState('#6366f1')
   const [formTaskId, setFormTaskId] = useState<string | null>(null)
+  const [formRecurrence, setFormRecurrence] = useState<{ type: 'none' | 'daily' | 'weekly' | 'monthly' | 'custom', interval: number, unit: 'days' | 'weeks' | 'months' }>({ type: 'none', interval: 1, unit: 'days' })
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd')
 
@@ -60,6 +61,7 @@ export default function DailyPlannerPage() {
     setFormTitle(defaultTitle)
     setFormTaskId(defaultTaskId)
     setFormColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)])
+    setFormRecurrence({ type: 'none', interval: 1, unit: 'days' })
     
     if (period === 'morning') { setFormTime('09:00'); setFormEndTime('10:00') }
     else if (period === 'afternoon') { setFormTime('14:00'); setFormEndTime('15:00') }
@@ -69,6 +71,7 @@ export default function DailyPlannerPage() {
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formTitle.trim()) return
+    const recurrence_rule = formRecurrence.type === 'none' ? null : { type: formRecurrence.type, interval: formRecurrence.type === 'custom' ? formRecurrence.interval : undefined, unit: formRecurrence.type === 'custom' ? formRecurrence.unit : undefined }
     await addTimeBlock({
       title: formTitle,
       date: dateStr,
@@ -77,7 +80,8 @@ export default function DailyPlannerPage() {
       color: formColor,
       category_id: null,
       task_id: formTaskId,
-      completed: false
+      completed: false,
+      recurrence_rule
     })
     setShowAddModal(null)
     setFormTitle('')
@@ -141,8 +145,8 @@ export default function DailyPlannerPage() {
 
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => setShowAddModal(null)}>
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="glass w-full max-w-sm p-5 md:p-6 relative" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-4 pt-20 md:pt-4 bg-black/20 backdrop-blur-sm" onClick={() => setShowAddModal(null)}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="glass w-full max-w-sm p-5 md:p-6 relative max-h-[85dvh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setShowAddModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"><X size={20} /></button>
               <h3 className="text-lg font-bold font-serif text-text-primary mb-4">添加时间块规划</h3>
               
@@ -165,6 +169,30 @@ export default function DailyPlannerPage() {
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">标签颜色</label>
                     <input type="color" value={formColor} onChange={e => setFormColor(e.target.value)} className="w-full h-9 p-0.5 border border-border-default bg-transparent rounded-lg cursor-pointer" required />
                   </div>
+                </div>
+                
+                <div className="pt-2 border-t border-black/5 dark:border-white/5 space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">重复设置</label>
+                    <select value={formRecurrence.type} onChange={e => setFormRecurrence(p => ({ ...p, type: e.target.value as any }))} className="w-full px-2 py-2 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm">
+                      <option value="none">不重复</option>
+                      <option value="daily">每天</option>
+                      <option value="weekly">每周</option>
+                      <option value="monthly">每月</option>
+                      <option value="custom">自定义</option>
+                    </select>
+                  </div>
+                  {formRecurrence.type === 'custom' && (
+                    <div className="flex gap-2 items-center">
+                      <span className="text-sm text-gray-500">每</span>
+                      <input type="number" min="1" value={formRecurrence.interval} onChange={e => setFormRecurrence(p => ({ ...p, interval: Number(e.target.value) }))} className="w-16 px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg text-sm outline-none focus:border-brand" />
+                      <select value={formRecurrence.unit} onChange={e => setFormRecurrence(p => ({ ...p, unit: e.target.value as any }))} className="w-20 px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg text-sm outline-none focus:border-brand">
+                        <option value="days">天</option>
+                        <option value="weeks">周</option>
+                        <option value="months">月</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
                 
                 <button type="submit" className="w-full py-2.5 rounded-lg text-bg-primary font-medium btn-press bg-text-primary dark:bg-bg-primary">保存规划</button>
@@ -216,7 +244,10 @@ function PeriodSection({ period, timeBlocks, onAdd, onToggle, onDelete, onAddFro
                 
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-bold truncate transition-colors ${block.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-text-primary hover:text-brand dark:hover:text-indigo-400'}`}>{block.title}</p>
-                  <p className="text-[10px] md:text-xs text-text-secondary mt-0.5">{block.start_time} - {block.end_time}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-[10px] md:text-xs text-text-secondary">{block.start_time} - {block.end_time}</p>
+                    {block.recurrence_rule && <span className="text-[9px] md:text-[10px] px-1.5 py-0.5 rounded border border-border-default bg-bg-tertiary text-text-secondary">🔁 重复</span>}
+                  </div>
                 </div>
 
                 {block.task_id && <span className="text-[10px] font-bold text-indigo-500 dark:text-brand bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md shrink-0">任务</span>}
@@ -235,8 +266,8 @@ function TaskPickerModal({ tasks, onSelect, onClose }: { tasks: any[]; onSelect:
   const [search, setSearch] = useState('')
   const filtered = tasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase()))
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass rounded-2xl shadow-2xl w-full max-w-md max-h-[60vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-start md:items-center justify-center p-4 pt-20 md:pt-4" onClick={onClose}>
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass rounded-2xl shadow-2xl w-full max-w-md max-h-[85dvh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-black/5 dark:border-white/5">
           <h3 className="font-bold text-text-primary mb-4 text-lg">选择任务转化为规划</h3>
           <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索任务..." className="w-full px-4 py-2 border border-white/20 bg-bg-secondary text-text-primary rounded-xl text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-colors" />

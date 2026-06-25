@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { TimeBlock } from '../types'
+import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns'
 
 export function useTimeBlocks(userId: string | undefined) {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([])
@@ -56,6 +57,35 @@ export function useTimeBlocks(userId: string | undefined) {
   }
 
   const toggleTimeBlock = async (id: string, completed: boolean) => {
+    const block = timeBlocks.find(b => b.id === id)
+    if (!block) return { error: { message: 'Block not found' } }
+
+    if (completed && block.recurrence_rule) {
+      const currentDue = parseISO(block.date)
+      let nextDate = new Date(currentDue)
+      const rule = block.recurrence_rule
+      if (rule.type === 'daily') nextDate = addDays(currentDue, 1)
+      else if (rule.type === 'weekly') nextDate = addWeeks(currentDue, 1)
+      else if (rule.type === 'monthly') nextDate = addMonths(currentDue, 1)
+      else if (rule.type === 'custom') {
+        if (rule.unit === 'days') nextDate = addDays(currentDue, rule.interval || 1)
+        else if (rule.unit === 'weeks') nextDate = addWeeks(currentDue, rule.interval || 1)
+        else if (rule.unit === 'months') nextDate = addMonths(currentDue, rule.interval || 1)
+      }
+      
+      await addTimeBlock({
+        title: block.title,
+        date: format(nextDate, 'yyyy-MM-dd'),
+        start_time: block.start_time,
+        end_time: block.end_time,
+        color: block.color,
+        category_id: block.category_id,
+        task_id: block.task_id,
+        completed: false,
+        recurrence_rule: block.recurrence_rule
+      })
+    }
+
     const { data, error } = await supabase
       .from('time_blocks')
       .update({ completed })

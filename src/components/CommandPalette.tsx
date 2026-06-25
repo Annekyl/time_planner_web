@@ -73,17 +73,18 @@ export default function CommandPalette() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]" 
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-start md:items-center justify-center p-4 pt-20 md:pt-4" 
             onClick={() => setIsOpen(false)}
           />
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg z-[101] px-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed top-0 md:top-[20%] w-full max-w-2xl z-[101] p-4"
+            onClick={e => e.stopPropagation()}
           >
-            <div className="bg-white/80 dark:bg-gray-900/90 backdrop-blur-xl border border-white/20 dark:border-gray-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="bg-white/95 dark:bg-[#2A2927]/95 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85dvh]">
               <div className="flex items-center px-4 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
                 <Search className="text-gray-400 mr-3" size={20} />
                 <input 

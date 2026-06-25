@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasks } from '../hooks/useTasks'
 import { Plus, Trash2, Edit3, Check, CheckSquare } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns'
 import { motion, type Variants } from 'framer-motion'
 
 const containerVariants: Variants = {
@@ -25,6 +25,7 @@ export default function TasksPage() {
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [form, setForm] = useState({ title: '', description: '', priority: 2 as 1 | 2 | 3 | 4, status: 'pending' as 'pending' | 'in_progress' | 'completed' | 'cancelled', due_date: '', category_id: '' })
   const [formSubtasks, setFormSubtasks] = useState<{completed: boolean, text: string}[]>([])
+  const [formRecurrence, setFormRecurrence] = useState<{ type: 'none' | 'daily' | 'weekly' | 'monthly' | 'custom', interval: number, unit: 'days' | 'weeks' | 'months' }>({ type: 'none', interval: 1, unit: 'days' })
   const [catForm, setCatForm] = useState({ name: '', color: '#3b82f6' })
 
   const parseDescription = (desc: string) => {
@@ -45,10 +46,31 @@ export default function TasksPage() {
     return desc ? (stLines.length > 0 ? `${desc}\n\n${stLines.join('\n')}` : desc) : stLines.join('\n')
   }
 
-  const resetForm = () => { setForm({ title: '', description: '', priority: 2, status: 'pending', due_date: '', category_id: '' }); setFormSubtasks([]); setShowForm(false); setEditingId(null) }
-  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); const finalDesc = buildDescription(form.description, formSubtasks); if (editingId) await updateTask(editingId, { ...form, description: finalDesc, due_date: form.due_date || null }); else await addTask({ ...form, description: finalDesc, due_date: form.due_date || null, completed_at: null }); resetForm() }
-  const handleEdit = (task: typeof tasks[0]) => { const parsed = parseDescription(task.description || ''); setForm({ title: task.title, description: parsed.description, priority: task.priority, status: task.status, due_date: task.due_date || '', category_id: task.category_id || '' }); setFormSubtasks(parsed.subtasks); setEditingId(task.id); setShowForm(true) }
-  const handleToggleComplete = async (task: typeof tasks[0]) => { const s = task.status === 'completed' ? 'pending' : 'completed'; await updateTask(task.id, { status: s, completed_at: s === 'completed' ? new Date().toISOString() : null }) }
+  const resetForm = () => { setForm({ title: '', description: '', priority: 2, status: 'pending', due_date: '', category_id: '' }); setFormSubtasks([]); setFormRecurrence({ type: 'none', interval: 1, unit: 'days' }); setShowForm(false); setEditingId(null) }
+  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); const finalDesc = buildDescription(form.description, formSubtasks); const recurrence_rule = formRecurrence.type === 'none' ? null : { type: formRecurrence.type, interval: formRecurrence.type === 'custom' ? formRecurrence.interval : undefined, unit: formRecurrence.type === 'custom' ? formRecurrence.unit : undefined }; if (editingId) await updateTask(editingId, { ...form, description: finalDesc, due_date: form.due_date || null, recurrence_rule }); else await addTask({ ...form, description: finalDesc, due_date: form.due_date || null, completed_at: null, recurrence_rule }); resetForm() }
+  const handleEdit = (task: typeof tasks[0]) => { const parsed = parseDescription(task.description || ''); setForm({ title: task.title, description: parsed.description, priority: task.priority, status: task.status, due_date: task.due_date || '', category_id: task.category_id || '' }); setFormSubtasks(parsed.subtasks); const r = task.recurrence_rule; setFormRecurrence({ type: r ? r.type : 'none', interval: r?.interval || 1, unit: r?.unit || 'days' }); setEditingId(task.id); setShowForm(true) }
+  const handleToggleComplete = async (task: typeof tasks[0]) => { 
+    const isCompleting = task.status !== 'completed';
+    if (isCompleting) {
+      if (task.recurrence_rule && task.due_date) {
+        const currentDue = parseISO(task.due_date);
+        let nextDate = new Date(currentDue);
+        const rule = task.recurrence_rule;
+        if (rule.type === 'daily') nextDate = addDays(currentDue, 1);
+        else if (rule.type === 'weekly') nextDate = addWeeks(currentDue, 1);
+        else if (rule.type === 'monthly') nextDate = addMonths(currentDue, 1);
+        else if (rule.type === 'custom') {
+          if (rule.unit === 'days') nextDate = addDays(currentDue, rule.interval || 1);
+          else if (rule.unit === 'weeks') nextDate = addWeeks(currentDue, rule.interval || 1);
+          else if (rule.unit === 'months') nextDate = addMonths(currentDue, rule.interval || 1);
+        }
+        await addTask({ title: task.title, description: task.description, priority: task.priority, category_id: task.category_id, status: 'pending', due_date: format(nextDate, 'yyyy-MM-dd'), completed_at: null, recurrence_rule: task.recurrence_rule });
+      }
+      await updateTask(task.id, { status: 'completed', completed_at: new Date().toISOString() });
+    } else {
+      await updateTask(task.id, { status: 'pending', completed_at: null });
+    }
+  }
   const handleToggleSubtask = async (task: typeof tasks[0], index: number) => {
     const parsed = parseDescription(task.description || '')
     parsed.subtasks[index].completed = !parsed.subtasks[index].completed
@@ -122,6 +144,30 @@ export default function TasksPage() {
               <div><label className="block text-xs font-medium text-text-secondary mb-1.5">截止日期</label><input type="date" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))} className={selectCls} /></div>
               <div><label className="block text-xs font-medium text-text-secondary mb-1.5">分类</label><select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))} className={selectCls}><option value="">无分类</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
             </div>
+            
+            <div className="pt-2 border-t border-border-default mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">重复设置 (仅带有截止日期时有效)</label>
+                <select value={formRecurrence.type} onChange={e => setFormRecurrence(p => ({ ...p, type: e.target.value as any }))} className={selectCls}>
+                  <option value="none">不重复</option>
+                  <option value="daily">每天</option>
+                  <option value="weekly">每周</option>
+                  <option value="monthly">每月</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </div>
+              {formRecurrence.type === 'custom' && (
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm text-text-secondary">每</span>
+                  <input type="number" min="1" value={formRecurrence.interval} onChange={e => setFormRecurrence(p => ({ ...p, interval: Number(e.target.value) }))} className="w-16 px-3 py-1.5 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
+                  <select value={formRecurrence.unit} onChange={e => setFormRecurrence(p => ({ ...p, unit: e.target.value as any }))} className="w-24 px-3 py-1.5 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand focus:border-brand">
+                    <option value="days">天</option>
+                    <option value="weeks">周</option>
+                    <option value="months">月</option>
+                  </select>
+                </div>
+              )}
+            </div>
             <div className="flex gap-2 pt-2">
               <button type="submit" className="px-5 py-2.5 bg-brand text-white rounded-xl hover:bg-brand-hover font-medium text-sm btn-press shadow-none transition-all duration-200">{editingId ? '保存更改' : '创建任务'}</button>
               <button type="button" onClick={resetForm} className="px-5 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-border-default text-text-secondary rounded-xl hover:bg-white dark:hover:bg-gray-600 font-medium text-sm btn-press transition-all duration-200">取消</button>
@@ -137,6 +183,7 @@ export default function TasksPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-sm font-bold transition-all duration-200 ${task.status === 'completed' ? 'line-through text-gray-400 dark:text-gray-500' : 'text-text-primary group-hover:text-brand dark:group-hover:text-indigo-400'}`}>{task.title}</span>
+                {task.recurrence_rule && <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-md font-medium border border-border-default bg-bg-tertiary text-text-secondary">🔁 重复</span>}
                 {task.category && <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-md font-medium border border-white/10" style={{ backgroundColor: task.category.color + '20', color: task.category.color }}>{task.category.name}</span>}
               </div>
               {(() => {
