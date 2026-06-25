@@ -1,8 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { useTasks } from '../hooks/useTasks'
-import { useGoals } from '../hooks/useGoals'
-import { useTimeBlocks } from '../hooks/useTimeBlocks'
+import { useDashboard } from '../hooks/useDashboard'
 import { CheckSquare, Target, Clock, TrendingUp, AlertCircle, Calendar, ListChecks } from 'lucide-react'
 import { format, isToday, isTomorrow, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -20,23 +18,10 @@ const itemVariants: Variants = {
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const { tasks } = useTasks(user?.id)
-  const { goals } = useGoals(user?.id)
-  const { timeBlocks } = useTimeBlocks(user?.id)
+  const { dashboardData } = useDashboard(user?.id)
   const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'today' | 'goals' | 'blocks'>('overview')
 
-  const stats = useMemo(() => {
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const todayTasks = tasks.filter(t => t.due_date === today)
-    const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress')
-    const todayBlocks = timeBlocks.filter(b => b.date === today)
-    const activeGoals = goals.filter(g => g.status === 'active')
-    const upcomingTasks = tasks
-      .filter(t => t.due_date && t.status !== 'completed' && t.status !== 'cancelled')
-      .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
-      .slice(0, 5)
-    return { todayTasks, pendingTasks, todayBlocks, activeGoals, upcomingTasks }
-  }, [tasks, goals, timeBlocks])
+  const stats = dashboardData || { todayTasks: [], pendingTasks: [], todayBlocks: [], activeGoals: [], upcomingTasks: [] }
 
   const priorityLabel: Record<number, string> = { 1: '低', 2: '中', 3: '高', 4: '紧急' }
   const priorityColor: Record<number, string> = {
@@ -46,7 +31,7 @@ export default function DashboardPage() {
     4: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   }
 
-  const renderTaskItem = (task: typeof tasks[0], idx: number) => (
+  const renderTaskItem = (task: any, idx: number) => (
     <motion.div 
       initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
       key={task.id} 
@@ -67,7 +52,7 @@ export default function DashboardPage() {
     </motion.div>
   )
 
-  const renderGoalItem = (goal: typeof goals[0], idx: number) => {
+  const renderGoalItem = (goal: any, idx: number) => {
     let daysText = '未设置目标日期'
     let badgeClass = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
     
@@ -185,10 +170,12 @@ export default function DashboardPage() {
         {activeTab === 'blocks' && (
           <motion.div key="blocks" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="glass rounded-2xl p-5 md:p-7">
             <h2 className="text-lg font-bold text-text-primary mb-5 flex items-center gap-2.5"><Clock size={20} className="text-amber-500" /> 今日时间块</h2>
-            {stats.todayBlocks.length === 0 ? <p className="text-sm text-gray-500 text-center py-8">今日未分配时间块。</p> : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {stats.todayBlocks.sort((a,b)=>a.start_time.localeCompare(b.start_time)).map((block, i) => (
-                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} key={block.id} className="p-4 bg-bg-secondary backdrop-blur-sm rounded-xl border border-white/20 dark:border-white/5 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] transition-all duration-300 flex flex-col gap-2 border-l-4" style={{ borderLeftColor: block.color || '#6366f1' }}>
+              {stats.todayBlocks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500"><Clock size={32} className="mb-3 opacity-20" /><p className="text-sm">今日无时间块规划</p></div>
+              ) : (
+                <div className="space-y-3">
+                  {stats.todayBlocks.sort((a: any, b: any) => a.start_time.localeCompare(b.start_time)).map((block: any, i: number) => (
+                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} key={block.id} className="p-4 bg-bg-secondary backdrop-blur-sm rounded-xl border border-white/20 dark:border-white/5 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] transition-all duration-300 flex flex-col gap-2 border-l-4" style={{ borderLeftColor: block.color || '#6366f1' }}>
                     <div className="flex items-center justify-between"><span className="text-sm font-bold text-text-primary">{block.title}</span><span className="text-xs font-medium text-text-secondary bg-white dark:bg-gray-900/50 px-2 py-1 rounded-md shadow-sm">{block.start_time} - {block.end_time}</span></div>
                   </motion.div>
                 ))}

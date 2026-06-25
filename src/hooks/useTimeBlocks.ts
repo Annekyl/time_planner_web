@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { TimeBlock } from '../types'
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns'
 
-export function useTimeBlocks(userId: string | undefined) {
+export function useTimeBlocks(userId: string | undefined, options?: { startDate?: string, endDate?: string }) {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -15,8 +15,11 @@ export function useTimeBlocks(userId: string | undefined) {
       .eq('user_id', userId)
       .order('start_time')
 
-    if (startDate) query = query.gte('date', startDate)
-    if (endDate) query = query.lte('date', endDate)
+    const sDate = startDate || options?.startDate
+    const eDate = endDate || options?.endDate
+
+    if (sDate) query = query.gte('date', sDate)
+    if (eDate) query = query.lte('date', eDate)
 
     const { data, error } = await query
     if (!error && data) setTimeBlocks(data as TimeBlock[])
@@ -24,7 +27,7 @@ export function useTimeBlocks(userId: string | undefined) {
 
   useEffect(() => {
     if (userId) fetchTimeBlocks().then(() => setLoading(false))
-  }, [userId])
+  }, [userId, options?.startDate, options?.endDate])
 
   const addTimeBlock = async (block: Omit<TimeBlock, 'id' | 'user_id' | 'created_at' | 'category' | 'task'>) => {
     if (!userId) return

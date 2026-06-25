@@ -15,11 +15,17 @@ const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#
 export default function CalendarPage() {
   const { user } = useAuth()
   const { settings } = useSettings(user?.id)
-  const { tasks, addTask } = useTasks(user?.id)
-  const { timeBlocks, addTimeBlock } = useTimeBlocks(user?.id)
-
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+
+  const dateRange = useMemo(() => {
+    const start = format(startOfWeek(startOfMonth(selectedDate)), 'yyyy-MM-dd')
+    const end = format(endOfWeek(endOfMonth(selectedDate)), 'yyyy-MM-dd')
+    return { startDate: start, endDate: end }
+  }, [selectedDate])
+
+  const { tasks, addTask } = useTasks(user?.id, dateRange)
+  const { timeBlocks, addTimeBlock } = useTimeBlocks(user?.id, dateRange)
   
   const [showAddModal, setShowAddModal] = useState<false | 'task' | 'block'>(false)
   const [formTitle, setFormTitle] = useState('')

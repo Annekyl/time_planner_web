@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasks } from '../hooks/useTasks'
 import { Plus, Trash2, Edit3, Check, CheckSquare } from 'lucide-react'
@@ -18,12 +18,12 @@ const itemVariants: Variants = {
 export default function TasksPage() {
   const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9']
   const { user } = useAuth()
-  const { tasks, categories, addTask, updateTask, deleteTask, addCategory, updateCategory, deleteCategory } = useTasks(user?.id)
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterCategory, setFilterCategory] = useState<string>('all')
+  const { tasks, categories, hasMore, loadMore, loading, addTask, updateTask, deleteTask, addCategory, updateCategory, deleteCategory } = useTasks(user?.id, { paginate: true, status: filterStatus, categoryId: filterCategory })
   const [showForm, setShowForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterCategory, setFilterCategory] = useState<string>('all')
   const [form, setForm] = useState({ title: '', description: '', priority: 2 as 1 | 2 | 3 | 4, status: 'pending' as 'pending' | 'in_progress' | 'completed' | 'cancelled', due_date: '', category_id: '' })
   const [formSubtasks, setFormSubtasks] = useState<{completed: boolean, text: string}[]>([])
   const [formRecurrence, setFormRecurrence] = useState<{ type: 'none' | 'daily' | 'weekly' | 'monthly' | 'custom', interval: number, unit: 'days' | 'weeks' | 'months' }>({ type: 'none', interval: 1, unit: 'days' })
@@ -94,7 +94,17 @@ export default function TasksPage() {
       setCatForm({ id: '', name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] }); 
     }
   }
-  const filteredTasks = tasks.filter(t => { if (filterStatus !== 'all' && t.status !== filterStatus) return false; if (filterCategory !== 'all' && t.category_id !== filterCategory) return false; return true })
+  const loaderRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!hasMore || loading) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) loadMore()
+    }, { threshold: 0.1 })
+    const current = loaderRef.current
+    if (current) observer.observe(current)
+    return () => { if (current) observer.unobserve(current) }
+  }, [hasMore, loading])
+
   const priorityLabel: Record<number, string> = { 1: '低', 2: '中', 3: '高', 4: '紧急' }
   const priorityColor: Record<number, string> = { 1: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400', 2: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', 3: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', 4: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
   const inputCls = "w-full px-4 py-2 border border-border-default bg-bg-secondary text-text-primary rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm transition-all duration-200"
@@ -203,7 +213,7 @@ export default function TasksPage() {
       )}
 
       <motion.div className="space-y-3" variants={containerVariants}>
-        {filteredTasks.map((task) => (
+        {tasks.map((task) => (
           <motion.div key={task.id} variants={itemVariants} className={`glass rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] group ${task.status === 'completed' ? 'opacity-60 bg-white/30 dark:bg-gray-800/30' : ''}`}>
             <button onClick={() => handleToggleComplete(task)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 checkbox-bounce ${task.status === 'completed' ? 'bg-green-500 border-green-500 scale-110' : 'border-gray-300 dark:border-gray-500 hover:border-indigo-500'}`}>{task.status === 'completed' && <Check size={12} className="text-white" />}</button>
             <div className="flex-1 min-w-0">
@@ -239,7 +249,12 @@ export default function TasksPage() {
             </div>
           </motion.div>
         ))}
-        {filteredTasks.length === 0 && <motion.div variants={itemVariants} className="text-center py-16 text-gray-400 dark:text-gray-500"><CheckSquare size={48} className="mx-auto mb-4 opacity-20" /><p className="font-medium text-sm">暂无任务</p></motion.div>}
+        {tasks.length === 0 && !loading && <motion.div variants={itemVariants} className="text-center py-16 text-gray-400 dark:text-gray-500"><CheckSquare size={48} className="mx-auto mb-4 opacity-20" /><p className="font-medium text-sm">暂无任务</p></motion.div>}
+        {hasMore && (
+          <div ref={loaderRef} className="py-6 flex justify-center items-center">
+            <div className="w-6 h-6 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   )

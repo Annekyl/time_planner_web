@@ -35,9 +35,11 @@ const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#
 export default function DailyPlannerPage() {
   const { user } = useAuth()
   const { settings } = useSettings(user?.id)
-  const { tasks } = useTasks(user?.id)
-  const { timeBlocks, addTimeBlock, toggleTimeBlock, deleteTimeBlock } = useTimeBlocks(user?.id)
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const dateStr = format(selectedDate, 'yyyy-MM-dd')
+
+  const { tasks } = useTasks(user?.id, { incompleteOnly: true })
+  const { timeBlocks, addTimeBlock, toggleTimeBlock, deleteTimeBlock } = useTimeBlocks(user?.id, { startDate: dateStr, endDate: dateStr })
   const [showTaskPicker, setShowTaskPicker] = useState<{ period: Period } | null>(null)
   
   // Modal State
@@ -53,7 +55,6 @@ export default function DailyPlannerPage() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const minSwipeDistance = 50
 
-  const dateStr = format(selectedDate, 'yyyy-MM-dd')
 
   const morningStart = settings.morning_start
   const morningEnd = settings.morning_end

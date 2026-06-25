@@ -1,10 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { useTasks } from '../hooks/useTasks'
-import { useGoals } from '../hooks/useGoals'
-import { useTimeBlocks } from '../hooks/useTimeBlocks'
+import { useStats } from '../hooks/useStats'
 import { BarChart3, TrendingUp, CheckCircle, Clock, Target } from 'lucide-react'
-import { format, subDays, parseISO, eachDayOfInterval, isToday, isTomorrow, differenceInDays, startOfDay } from 'date-fns'
+import { format, parseISO, isToday, isTomorrow, differenceInDays, startOfDay } from 'date-fns'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 
@@ -18,11 +16,11 @@ const itemVariants: Variants = {
   show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
 }
 
+const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9']
+
 export default function StatsPage() {
   const { user } = useAuth()
-  const { tasks, categories } = useTasks(user?.id)
-  const { goals } = useGoals(user?.id)
-  const { timeBlocks } = useTimeBlocks(user?.id)
+  const { stats: statsData } = useStats(user?.id)
   const [activeTab, setActiveTab] = useState<'completed' | 'in_progress' | 'goals' | null>(null)
 
   const priorityLabel: Record<number, string> = { 1: '低', 2: '中', 3: '高', 4: '紧急' }
@@ -69,21 +67,7 @@ export default function StatsPage() {
 
   const toggleTab = (tab: typeof activeTab) => setActiveTab(activeTab === tab ? null : tab)
 
-  const stats = useMemo(() => {
-    const now = new Date()
-    const last7Days = subDays(now, 6)
-    const completedTasks = tasks.filter(t => t.status === 'completed')
-    const pendingTasks = tasks.filter(t => t.status === 'pending')
-    const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
-    const days = eachDayOfInterval({ start: last7Days, end: now })
-    const dailyCompletions = days.map(day => { const dayStr = format(day, 'yyyy-MM-dd'); return { date: format(day, 'M/d'), count: completedTasks.filter(t => t.completed_at && format(parseISO(t.completed_at), 'yyyy-MM-dd') === dayStr).length } })
-    const totalBlockHours = timeBlocks.reduce((acc, b) => { const [sh, sm] = b.start_time.split(':').map(Number); const [eh, em] = b.end_time.split(':').map(Number); return acc + ((eh * 60 + em) - (sh * 60 + sm)) / 60 }, 0)
-    const categoryStats = categories.map(c => ({ name: c.name, color: c.color, count: tasks.filter(t => t.category_id === c.id).length, completed: completedTasks.filter(t => t.category_id === c.id).length })).filter(c => c.count > 0)
-    const activeGoals = goals.filter(g => g.status === 'active')
-    const avgGoalProgress = activeGoals.length > 0 ? Math.round(activeGoals.reduce((sum, g) => sum + g.progress, 0) / activeGoals.length) : 0
-    const maxDailyCount = Math.max(...dailyCompletions.map(d => d.count), 1)
-    return { totalTasks: tasks.length, completedTasks: completedTasks.length, pendingTasks: pendingTasks.length, inProgressTasks: inProgressTasks.length, completionRate: tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0, totalBlocks: timeBlocks.length, totalBlockHours: totalBlockHours.toFixed(1), categoryStats, activeGoals: activeGoals.length, avgGoalProgress, dailyCompletions, maxDailyCount, completedTasksList: completedTasks, inProgressTasksList: inProgressTasks, activeGoalsList: activeGoals }
-  }, [tasks, goals, timeBlocks, categories])
+  const stats = statsData ? { ...statsData, completionRate: statsData.totalTasks > 0 ? Math.round((statsData.completedTasks / statsData.totalTasks) * 100) : 0 } : { totalTasks: 0, completedTasks: 0, pendingTasks: 0, inProgressTasks: 0, completionRate: 0, totalBlocks: 0, totalBlockHours: 0, categoryStats: [], activeGoals: 0, avgGoalProgress: 0, dailyCompletions: [], completedTasksList: [], inProgressTasksList: [], activeGoalsList: [] }
 
   return (
     <motion.div 
@@ -149,16 +133,9 @@ export default function StatsPage() {
             <div className="h-48 md:h-64 mt-4 w-full flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={stats.categoryStats}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="count"
-                    stroke="none"
-                  >
-                    {stats.categoryStats.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color || '#6366f1'} />
+                  <Pie data={stats.categoryStats} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="count" stroke="none">
+                    {stats.categoryStats.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || PRESET_COLORS[index % PRESET_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip 
