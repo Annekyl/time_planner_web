@@ -18,7 +18,7 @@ const itemVariants: Variants = {
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const { dashboardData, loading, rpcError } = useDashboard(user?.id)
+  const { dashboardData, rpcError } = useDashboard(user?.id)
   const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'today' | 'goals' | 'blocks'>('overview')
 
   const stats = dashboardData || { todayTasks: [], pendingTasks: [], todayBlocks: [], activeGoals: [], upcomingTasks: [] }
