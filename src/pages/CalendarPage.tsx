@@ -193,6 +193,8 @@ function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsFo
 
 function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent, startHour, hourHeight }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; startHour: number; hourHeight: number }) {
   const displayHours = Array.from({ length: 24 - startHour }, (_, i) => i + startHour)
+  const [activeCell, setActiveCell] = useState<{ day: string, hour: number } | null>(null)
+  
   return (
     <div className="glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
       <div className="overflow-y-auto max-h-[600px] relative">
@@ -209,10 +211,33 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
         <div className="grid grid-cols-[3rem_repeat(7,1fr)] md:grid-cols-[4rem_repeat(7,1fr)] relative bg-white dark:bg-[#1A1918]">
           <div className="w-12 md:w-16">{displayHours.map(hour => <div key={hour} className="border-b border-gray-200 dark:border-gray-700/50 flex items-start justify-end pr-2 pt-0.5" style={{ height: `${hourHeight}px` }}><span className="text-[9px] md:text-[10px] font-medium text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span></div>)}</div>
           {days.map(day => { const events = getEventsForDay(day); return (
-            <div key={day.toISOString()} className="relative border-l border-gray-200 dark:border-gray-700/50 cursor-crosshair" onDoubleClick={(e) => { e.stopPropagation(); const y = e.clientY - e.currentTarget.getBoundingClientRect().top; let h = Math.floor(y / hourHeight) + startHour; h = Math.max(startHour, Math.min(23, h)); onAddEvent('block', day, `${String(h).padStart(2, '0')}:00`); }}>
-              {displayHours.map(hour => <div key={hour} className="border-b border-gray-200 dark:border-gray-700/50" style={{ height: `${hourHeight}px` }} />)}
-              {events.blocks.map(block => { const [sh, sm] = block.start_time.split(':').map(Number); if (sh < startHour || sh > 23) return null; const top = ((sh - startHour) * hourHeight) + ((sm / 60) * hourHeight); const [eh, em] = block.end_time.split(':').map(Number); const height = (((eh * 60 + em) - (sh * 60 + sm)) / 60) * hourHeight; return <div key={block.id} className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ backgroundColor: block.color, top: `${top}px`, height: `${Math.max(height, 20)}px` }}><p className="font-medium truncate">{block.title}</p></div> })}
-              {events.tasks.length > 0 && <div className="absolute bottom-1 left-0.5 right-0.5 flex flex-col gap-0.5">{events.tasks.slice(0, 2).map(t => <div key={t.id} className="bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded px-1 py-0.5 text-[9px] truncate">{t.title}</div>)}{events.tasks.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500 px-1 font-medium">+{events.tasks.length - 2}</div>}</div>}
+            <div key={day.toISOString()} className="relative border-l border-gray-200 dark:border-gray-700/50 cursor-pointer">
+              {displayHours.map(hour => {
+                const isActive = activeCell?.day === day.toISOString() && activeCell?.hour === hour;
+                return (
+                  <div 
+                    key={hour} 
+                    className={`border-b border-gray-200 dark:border-gray-700/50 relative transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
+                    style={{ height: `${hourHeight}px` }}
+                    onClick={() => {
+                      if (isActive) {
+                        onAddEvent('block', day, `${String(hour).padStart(2, '0')}:00`);
+                        setActiveCell(null);
+                      } else {
+                        setActiveCell({ day: day.toISOString(), hour });
+                      }
+                    }}
+                  >
+                    {isActive && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Plus className="text-brand opacity-80" size={20} />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              {events.blocks.map(block => { const [sh, sm] = block.start_time.split(':').map(Number); if (sh < startHour || sh > 23) return null; const top = ((sh - startHour) * hourHeight) + ((sm / 60) * hourHeight); const [eh, em] = block.end_time.split(':').map(Number); const height = (((eh * 60 + em) - (sh * 60 + sm)) / 60) * hourHeight; return <div key={block.id} className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in shadow-sm ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ backgroundColor: block.color, top: `${top}px`, height: `${Math.max(height, 20)}px`, pointerEvents: 'none' }}><p className="font-medium truncate">{block.title}</p></div> })}
+              {events.tasks.length > 0 && <div className="absolute bottom-1 left-0.5 right-0.5 flex flex-col gap-0.5 pointer-events-none">{events.tasks.slice(0, 2).map(t => <div key={t.id} className="bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded px-1 py-0.5 text-[9px] truncate">{t.title}</div>)}{events.tasks.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500 px-1 font-medium">+{events.tasks.length - 2}</div>}</div>}
             </div>
           )})}
         </div>
@@ -224,14 +249,40 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
 function DayView({ date, events, onAddEvent, startHour, hourHeight }: { date: Date; events: { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; startHour: number; hourHeight: number }) {
   const displayHours = Array.from({ length: 24 - startHour }, (_, i) => i + startHour)
   const getBlockStyle = (block: any) => { const [sh, sm] = block.start_time.split(':').map(Number); const [eh, em] = block.end_time.split(':').map(Number); return { top: `${((sh - startHour) * hourHeight) + ((sm / 60) * hourHeight)}px`, height: `${Math.max((((eh * 60 + em) - (sh * 60 + sm)) / 60) * hourHeight, 24)}px` } }
+  
+  const [activeCell, setActiveCell] = useState<{ day: string, hour: number } | null>(null)
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
       <div className="md:col-span-2 glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
         <div className="overflow-y-auto max-h-[600px]"><div className="flex relative">
           <div className="w-14 md:w-16 shrink-0">{displayHours.map(hour => <div key={hour} className="border-b border-border-subtle flex items-start justify-end pr-2 pt-0.5" style={{ height: `${hourHeight}px` }}><span className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span></div>)}</div>
-          <div className="flex-1 relative border-l border-border-subtle cursor-crosshair" onDoubleClick={(e) => { e.stopPropagation(); const y = e.clientY - e.currentTarget.getBoundingClientRect().top; let h = Math.floor(y / hourHeight) + startHour; h = Math.max(startHour, Math.min(23, h)); onAddEvent('block', date, `${String(h).padStart(2, '0')}:00`); }}>
-            {displayHours.map(hour => <div key={hour} className="border-b border-border-subtle" style={{ height: `${hourHeight}px` }} />)}
-            {events.blocks.map(block => { const [sh] = block.start_time.split(':').map(Number); if (sh < startHour || sh > 23) return null; return <div key={block.id} className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...getBlockStyle(block), backgroundColor: block.color }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> })}
+          <div className="flex-1 relative border-l border-border-subtle cursor-pointer">
+            {displayHours.map(hour => {
+              const isActive = activeCell?.day === date.toISOString() && activeCell?.hour === hour;
+              return (
+                <div 
+                  key={hour} 
+                  className={`border-b border-border-subtle relative transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
+                  style={{ height: `${hourHeight}px` }}
+                  onClick={() => {
+                    if (isActive) {
+                      onAddEvent('block', date, `${String(hour).padStart(2, '0')}:00`);
+                      setActiveCell(null);
+                    } else {
+                      setActiveCell({ day: date.toISOString(), hour });
+                    }
+                  }}
+                >
+                  {isActive && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Plus className="text-brand opacity-80" size={24} />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {events.blocks.map(block => { const [sh] = block.start_time.split(':').map(Number); if (sh < startHour || sh > 23) return null; return <div key={block.id} className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in shadow-sm ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...getBlockStyle(block), backgroundColor: block.color, pointerEvents: 'none' }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> })}
           </div>
         </div></div>
       </div>

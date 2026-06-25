@@ -63,10 +63,20 @@
   
   html {
     @apply bg-bg-page text-text-primary font-sans antialiased;
+    scrollbar-width: none;
+  }
+  
+  html::-webkit-scrollbar {
+    display: none;
   }
   
   body {
     @apply bg-bg-page transition-colors duration-300;
+    scrollbar-width: none;
+  }
+  
+  body::-webkit-scrollbar {
+    display: none;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -83,6 +93,13 @@
   }
   .dark .glass {
     @apply bg-bg-primary border border-border-default shadow-[0_1px_3px_rgba(0,0,0,0.24)];
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
