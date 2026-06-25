@@ -14,7 +14,14 @@ export default defineConfig({
         short_name: 'Planner',
         theme_color: '#4f46e5',
         background_color: '#ffffff',
-        display: 'standalone'
+        display: 'standalone',
+        icons: [
+          {
+            src: 'image.png',
+            sizes: '192x192 512x512',
+            type: 'image/png'
+          }
+        ]
       }
     })
   ],

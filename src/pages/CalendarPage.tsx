@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings'
 import { useTasks } from '../hooks/useTasks'
@@ -60,6 +60,7 @@ export default function CalendarPage() {
     addIntervals(settings.morning_start, settings.morning_end)
     addIntervals(settings.afternoon_start, settings.afternoon_end)
     addIntervals(settings.evening_start, settings.evening_end)
+    
     return intervals
   }, [settings.morning_start, settings.morning_end, settings.afternoon_start, settings.afternoon_end, settings.evening_start, settings.evening_end, defaultDuration])
 
@@ -195,8 +196,8 @@ export default function CalendarPage() {
       </div>
 
       {viewMode === 'month' && <MonthView days={monthDays} currentMonth={selectedDate} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} />}
-      {viewMode === 'week' && <WeekView days={weekDays} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} onDropEvent={handleDropEvent} timeIntervals={timeIntervals} hourHeight={settings.hour_height || 48} defaultDuration={defaultDuration} />}
-      {viewMode === 'day' && <DayView date={selectedDate} events={getEventsForDay(selectedDate)} onAddEvent={openModal} onDropEvent={handleDropEvent} timeIntervals={timeIntervals} hourHeight={settings.hour_height || 48} defaultDuration={defaultDuration} />}
+      {viewMode === 'week' && <WeekView days={weekDays} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} onDropEvent={handleDropEvent} timeIntervals={timeIntervals} hourHeight={settings.hour_height || 48} defaultDuration={defaultDuration} settings={settings} />}
+      {viewMode === 'day' && <DayView date={selectedDate} events={getEventsForDay(selectedDate)} onAddEvent={openModal} onDropEvent={handleDropEvent} timeIntervals={timeIntervals} hourHeight={settings.hour_height || 48} defaultDuration={defaultDuration} settings={settings} />}
 
       <AnimatePresence>
         {showAddModal && (
@@ -258,30 +259,78 @@ function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsFo
   )
 }
 
-function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent, onDropEvent, timeIntervals, hourHeight, defaultDuration }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onDropEvent: (payload: any, d: Date, interval: string) => void; timeIntervals: string[]; hourHeight: number; defaultDuration: number }) {
+function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent, onDropEvent, timeIntervals, hourHeight, defaultDuration, settings }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onDropEvent: (payload: any, d: Date, interval: string) => void; timeIntervals: string[]; hourHeight: number; defaultDuration: number; settings: any }) {
   const [activeCell, setActiveCell] = useState<{ day: string, interval: string } | null>(null)
   
   const timeToMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+  const minsToTime = (mins: number) => `${Math.floor(mins/60).toString().padStart(2, '0')}:${(mins%60).toString().padStart(2, '0')}`
+  const gapHeight = 32;
+
+  const getIntervalEnd = (idx: number) => {
+    const iStart = timeToMins(timeIntervals[idx]);
+    let validEnds: number[] = [];
+    const checkPeriod = (startStr: string, endStr: string) => {
+      if (!startStr || !endStr) return;
+      const s = timeToMins(startStr);
+      const e = timeToMins(endStr);
+      if (iStart >= s && iStart < e) validEnds.push(e);
+    };
+    checkPeriod(settings?.morning_start, settings?.morning_end);
+    checkPeriod(settings?.afternoon_start, settings?.afternoon_end);
+    checkPeriod(settings?.evening_start, settings?.evening_end);
+    
+    const maxPeriodEnd = validEnds.length > 0 ? Math.max(...validEnds) : iStart + defaultDuration;
+    const nextStart = idx < timeIntervals.length - 1 ? timeToMins(timeIntervals[idx+1]) : Infinity;
+    return Math.min(iStart + defaultDuration, maxPeriodEnd, nextStart);
+  };
+
+  const getTopPixel = (targetMins: number) => {
+    if (timeIntervals.length === 0) return 0;
+    const firstStart = timeToMins(timeIntervals[0]);
+    if (targetMins < firstStart) return ((targetMins - firstStart) / defaultDuration) * hourHeight;
+    
+    let top = 0;
+    for (let i = 0; i < timeIntervals.length; i++) {
+      const iStart = timeToMins(timeIntervals[i]);
+      const iEnd = getIntervalEnd(i);
+      const cellHeight = ((iEnd - iStart) / defaultDuration) * hourHeight;
+      
+      if (i > 0) {
+        const prevEnd = getIntervalEnd(i - 1);
+        if (iStart > prevEnd) {
+          top += gapHeight;
+        }
+      }
+      
+      if (targetMins >= iStart && targetMins <= iEnd) {
+        return top + ((targetMins - iStart) / (iEnd - iStart)) * cellHeight;
+      }
+      
+      if (i < timeIntervals.length - 1) {
+        const nextStart = timeToMins(timeIntervals[i+1]);
+        if (targetMins > iEnd && targetMins < nextStart) {
+          const fraction = (targetMins - iEnd) / (nextStart - iEnd);
+          return top + cellHeight + fraction * gapHeight;
+        }
+      }
+      
+      top += cellHeight;
+    }
+    
+    const lastEnd = getIntervalEnd(timeIntervals.length - 1);
+    return top + ((targetMins - lastEnd) / defaultDuration) * hourHeight;
+  };
+
   const getBlockStyle = (block: any) => {
+    if (!timeIntervals.length) return { display: 'none' };
     const startMins = timeToMins(block.start_time);
     const endMins = timeToMins(block.end_time);
-    let startIndex = -1;
-    let minsIntoInterval = 0;
-    for (let i = 0; i < timeIntervals.length; i++) {
-      const iMins = timeToMins(timeIntervals[i]);
-      const nextMins = i < timeIntervals.length - 1 ? timeToMins(timeIntervals[i+1]) : iMins + defaultDuration;
-      if (startMins >= iMins && (startMins < nextMins || i === timeIntervals.length - 1)) {
-        startIndex = i;
-        minsIntoInterval = startMins - iMins;
-        break;
-      }
-    }
-    if (startIndex === -1) return { display: 'none' };
-    const pixelsPerMinute = hourHeight / defaultDuration;
-    const top = (startIndex * hourHeight) + (minsIntoInterval * pixelsPerMinute);
-    const durationMins = endMins - startMins;
-    const height = durationMins * pixelsPerMinute;
-    return { top: `${top}px`, height: `${Math.max(height, 20)}px` };
+    
+    const startTop = getTopPixel(startMins);
+    const endTop = getTopPixel(endMins);
+    const height = endTop - startTop;
+    
+    return { top: `${startTop}px`, height: `${Math.max(height, 20)}px` };
   }
 
   return (
@@ -299,46 +348,87 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
         </div>
         <div className="grid grid-cols-[3rem_repeat(7,1fr)] md:grid-cols-[4rem_repeat(7,1fr)] relative bg-white dark:bg-[#1A1918]">
           <div className="flex flex-col border-r border-border-subtle bg-bg-secondary/50">
-            {timeIntervals.map(interval => (
-              <div key={interval} className="relative" style={{ height: `${hourHeight}px` }}>
-                <span className="absolute right-2 text-[9px] md:text-[10px] text-text-secondary px-1 bg-bg-secondary/50" style={{ top: `-10px` }}>
-                  {interval}
-                </span>
-              </div>
-            ))}
+            {timeIntervals.map((interval, idx) => {
+              const iStart = timeToMins(interval);
+              const iEnd = getIntervalEnd(idx);
+              const cellHeight = ((iEnd - iStart) / defaultDuration) * hourHeight;
+              const isGap = idx > 0 && iStart > getIntervalEnd(idx - 1);
+              const isLastInPeriod = idx === timeIntervals.length - 1 || timeToMins(timeIntervals[idx+1]) > iEnd;
+              
+              return (
+                <React.Fragment key={`sidebar-${interval}`}>
+                  {isGap && <div style={{ height: `${gapHeight}px` }} className="bg-bg-tertiary border-t border-b border-border-default/50" />}
+                  <div className="relative" style={{ height: `${cellHeight}px` }}>
+                    <span className="absolute right-2 text-[11px] md:text-xs text-text-secondary px-1 bg-bg-secondary/50 z-10" style={{ top: idx === 0 ? '0px' : '-10px' }}>
+                      {interval}
+                    </span>
+                    {isLastInPeriod && (
+                      <span className="absolute right-2 text-[11px] md:text-xs text-text-secondary px-1 bg-bg-secondary/50 z-10" style={{ bottom: '-10px' }}>
+                        {minsToTime(iEnd)}
+                      </span>
+                    )}
+                  </div>
+                </React.Fragment>
+              )
+            })}
           </div>
           {days.map(day => { const events = getEventsForDay(day); return (
             <div key={day.toISOString()} className="relative border-l border-gray-200 dark:border-gray-700/50 cursor-pointer">
-              <div className="absolute inset-0 pointer-events-none">
-                {timeIntervals.map((interval, idx) => (
-                  <div key={`${interval}-${idx}`} className="absolute w-full border-t border-border-subtle" style={{ top: `${idx * hourHeight}px` }} />
-                ))}
+              <div className="absolute inset-0 pointer-events-none flex flex-col">
+                {timeIntervals.map((interval, idx) => {
+                  const iStart = timeToMins(interval);
+                  const iEnd = getIntervalEnd(idx);
+                  const cellHeight = ((iEnd - iStart) / defaultDuration) * hourHeight;
+                  const isGap = idx > 0 && iStart > getIntervalEnd(idx - 1);
+                  return (
+                    <React.Fragment key={`${interval}-grid-${idx}`}>
+                      {isGap && <div style={{ height: `${gapHeight}px` }} className="w-full shrink-0 border-t border-b border-border-default/50 bg-bg-tertiary/30" />}
+                      <div className="w-full shrink-0 border-t border-border-subtle" style={{ height: `${cellHeight}px` }} />
+                    </React.Fragment>
+                  )
+                })}
               </div>
-              {timeIntervals.map(interval => {
-                const isActive = activeCell?.day === day.toISOString() && activeCell?.interval === interval;
-                return (
-                  <div 
-                    key={interval} 
-                    className={`relative transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
-                    style={{ height: `${hourHeight}px` }}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const data = e.dataTransfer.getData('application/json');
-                      if (data) onDropEvent(JSON.parse(data), day, interval);
-                    }}
-                    onClick={() => {
-                      if (isActive) {
-                        onAddEvent('block', day, interval);
-                        setActiveCell(null);
-                      } else {
-                        setActiveCell({ day: day.toISOString(), interval });
-                      }
-                    }}
-                  >
-                  </div>
-                )
-              })}
+              <div className="relative w-full h-full flex flex-col z-0">
+                {timeIntervals.map((interval, idx) => {
+                  const isActive = activeCell?.day === day.toISOString() && activeCell?.interval === interval;
+                  const iStart = timeToMins(interval);
+                  const iEnd = getIntervalEnd(idx);
+                  const cellHeight = ((iEnd - iStart) / defaultDuration) * hourHeight;
+                  const isGap = idx > 0 && iStart > getIntervalEnd(idx - 1);
+                  return (
+                    <React.Fragment key={`${interval}-drop-${idx}`}>
+                      {isGap && (
+                        <div className="w-full shrink-0 flex items-center justify-center pointer-events-none overflow-hidden" style={{ height: `${gapHeight}px` }}>
+                          <div className="flex items-center gap-1.5 opacity-30">
+                            <div className="w-3 md:w-6 h-px bg-gray-500"></div>
+                            <span className="text-[8px] text-gray-600 font-bold tracking-widest uppercase">REST</span>
+                            <div className="w-3 md:w-6 h-px bg-gray-500"></div>
+                          </div>
+                        </div>
+                      )}
+                      <div 
+                        className={`relative shrink-0 transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
+                        style={{ height: `${cellHeight}px` }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const data = e.dataTransfer.getData('application/json');
+                          if (data) onDropEvent(JSON.parse(data), day, interval);
+                        }}
+                        onClick={() => {
+                          if (isActive) {
+                            onAddEvent('block', day, interval);
+                            setActiveCell(null);
+                          } else {
+                            setActiveCell({ day: day.toISOString(), interval });
+                          }
+                        }}
+                      >
+                      </div>
+                    </React.Fragment>
+                  )
+                })}
+              </div>
               {events.blocks.map(block => { 
                 const style = getBlockStyle(block);
                 if (style.display === 'none') return null;
@@ -353,28 +443,76 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
   )
 }
 
-function DayView({ date, events, onAddEvent, onDropEvent, timeIntervals, hourHeight, defaultDuration }: { date: Date; events: { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onDropEvent: (payload: any, d: Date, interval: string) => void; timeIntervals: string[]; hourHeight: number; defaultDuration: number }) {
+function DayView({ date, events, onAddEvent, onDropEvent, timeIntervals, hourHeight, defaultDuration, settings }: { date: Date; events: { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onDropEvent: (payload: any, d: Date, interval: string) => void; timeIntervals: string[]; hourHeight: number; defaultDuration: number; settings: any }) {
   const timeToMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+  const minsToTime = (mins: number) => `${Math.floor(mins/60).toString().padStart(2, '0')}:${(mins%60).toString().padStart(2, '0')}`
+  const gapHeight = 32;
+
+  const getIntervalEnd = (idx: number) => {
+    const iStart = timeToMins(timeIntervals[idx]);
+    let validEnds: number[] = [];
+    const checkPeriod = (startStr: string, endStr: string) => {
+      if (!startStr || !endStr) return;
+      const s = timeToMins(startStr);
+      const e = timeToMins(endStr);
+      if (iStart >= s && iStart < e) validEnds.push(e);
+    };
+    checkPeriod(settings?.morning_start, settings?.morning_end);
+    checkPeriod(settings?.afternoon_start, settings?.afternoon_end);
+    checkPeriod(settings?.evening_start, settings?.evening_end);
+    
+    const maxPeriodEnd = validEnds.length > 0 ? Math.max(...validEnds) : iStart + defaultDuration;
+    const nextStart = idx < timeIntervals.length - 1 ? timeToMins(timeIntervals[idx+1]) : Infinity;
+    return Math.min(iStart + defaultDuration, maxPeriodEnd, nextStart);
+  };
+
+  const getTopPixel = (targetMins: number) => {
+    if (timeIntervals.length === 0) return 0;
+    const firstStart = timeToMins(timeIntervals[0]);
+    if (targetMins < firstStart) return ((targetMins - firstStart) / defaultDuration) * hourHeight;
+    
+    let top = 0;
+    for (let i = 0; i < timeIntervals.length; i++) {
+      const iStart = timeToMins(timeIntervals[i]);
+      const iEnd = getIntervalEnd(i);
+      const cellHeight = ((iEnd - iStart) / defaultDuration) * hourHeight;
+      
+      if (i > 0) {
+        const prevEnd = getIntervalEnd(i - 1);
+        if (iStart > prevEnd) {
+          top += gapHeight;
+        }
+      }
+      
+      if (targetMins >= iStart && targetMins <= iEnd) {
+        return top + ((targetMins - iStart) / (iEnd - iStart)) * cellHeight;
+      }
+      
+      if (i < timeIntervals.length - 1) {
+        const nextStart = timeToMins(timeIntervals[i+1]);
+        if (targetMins > iEnd && targetMins < nextStart) {
+          const fraction = (targetMins - iEnd) / (nextStart - iEnd);
+          return top + cellHeight + fraction * gapHeight;
+        }
+      }
+      
+      top += cellHeight;
+    }
+    
+    const lastEnd = getIntervalEnd(timeIntervals.length - 1);
+    return top + ((targetMins - lastEnd) / defaultDuration) * hourHeight;
+  };
+
   const getBlockStyle = (block: any) => {
+    if (!timeIntervals.length) return { display: 'none' };
     const startMins = timeToMins(block.start_time);
     const endMins = timeToMins(block.end_time);
-    let startIndex = -1;
-    let minsIntoInterval = 0;
-    for (let i = 0; i < timeIntervals.length; i++) {
-      const iMins = timeToMins(timeIntervals[i]);
-      const nextMins = i < timeIntervals.length - 1 ? timeToMins(timeIntervals[i+1]) : iMins + defaultDuration;
-      if (startMins >= iMins && (startMins < nextMins || i === timeIntervals.length - 1)) {
-        startIndex = i;
-        minsIntoInterval = startMins - iMins;
-        break;
-      }
-    }
-    if (startIndex === -1) return { display: 'none' };
-    const pixelsPerMinute = hourHeight / defaultDuration;
-    const top = (startIndex * hourHeight) + (minsIntoInterval * pixelsPerMinute);
-    const durationMins = endMins - startMins;
-    const height = durationMins * pixelsPerMinute;
-    return { top: `${top}px`, height: `${Math.max(height, 24)}px` };
+    
+    const startTop = getTopPixel(startMins);
+    const endTop = getTopPixel(endMins);
+    const height = endTop - startTop;
+    
+    return { top: `${startTop}px`, height: `${Math.max(height, 24)}px` };
   }
   
   const [activeCell, setActiveCell] = useState<{ day: string, interval: string } | null>(null)
@@ -384,54 +522,94 @@ function DayView({ date, events, onAddEvent, onDropEvent, timeIntervals, hourHei
       <div className="md:col-span-2 glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
         <div className="overflow-y-auto max-h-[600px]"><div className="flex relative">
           <div className="flex flex-col border-r border-border-subtle bg-bg-secondary/50">
-            {timeIntervals.map(interval => (
-              <div key={interval} className="relative" style={{ height: `${hourHeight}px` }}>
-                <span className="absolute right-2 text-[9px] md:text-[10px] text-text-secondary px-1 bg-bg-secondary/50" style={{ top: `-10px` }}>
-                  {interval}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="flex-1 relative border-l border-border-subtle cursor-pointer">
-            <div className="absolute inset-0 pointer-events-none">
-              {timeIntervals.map((interval, idx) => (
-                <div key={`${interval}-${idx}`} className="absolute w-full border-t border-border-subtle" style={{ top: `${idx * hourHeight}px` }} />
-              ))}
-            </div>
-            {timeIntervals.map(interval => {
-              const isActive = activeCell?.day === date.toISOString() && activeCell?.interval === interval;
+            {timeIntervals.map((interval, idx) => {
+              const iStart = timeToMins(interval);
+              const iEnd = getIntervalEnd(idx);
+              const cellHeight = ((iEnd - iStart) / defaultDuration) * hourHeight;
+              const isGap = idx > 0 && iStart > getIntervalEnd(idx - 1);
+              const isLastInPeriod = idx === timeIntervals.length - 1 || timeToMins(timeIntervals[idx+1]) > iEnd;
               return (
-                <div 
-                  key={interval} 
-                  className={`relative transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
-                  style={{ height: `${hourHeight}px` }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const data = e.dataTransfer.getData('application/json');
-                    if (data) onDropEvent(JSON.parse(data), date, interval);
-                  }}
-                  onClick={() => {
-                    if (isActive) {
-                      onAddEvent('block', date, interval);
-                      setActiveCell(null);
-                    } else {
-                      setActiveCell({ day: date.toISOString(), interval });
-                    }
-                  }}
-                >
-                  {isActive && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Plus className="text-brand opacity-80" size={24} />
-                    </div>
-                  )}
-                </div>
+                <React.Fragment key={`sidebar-${interval}`}>
+                  {isGap && <div style={{ height: `${gapHeight}px` }} className="bg-bg-tertiary border-t border-b border-border-default/50" />}
+                  <div className="relative" style={{ height: `${cellHeight}px` }}>
+                    <span className="absolute right-2 text-[11px] md:text-xs text-text-secondary px-1 bg-bg-secondary/50 z-10" style={{ top: idx === 0 ? '0px' : '-10px' }}>
+                      {interval}
+                    </span>
+                    {isLastInPeriod && (
+                      <span className="absolute right-2 text-[11px] md:text-xs text-text-secondary px-1 bg-bg-secondary/50 z-10" style={{ bottom: '-10px' }}>
+                        {minsToTime(iEnd)}
+                      </span>
+                    )}
+                  </div>
+                </React.Fragment>
               )
             })}
-            {events.blocks.map(block => { 
-              const style = getBlockStyle(block);
-              if (style.display === 'none') return null;
-              return <div key={block.id} draggable onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('application/json', JSON.stringify({ type: 'block', id: block.id, start: block.start_time, end: block.end_time })) }} className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in shadow-sm cursor-grab active:cursor-grabbing hover:z-10 ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...style, backgroundColor: block.color }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> 
+          </div>
+          <div className="flex-1 relative border-l border-border-subtle cursor-pointer">
+            <div className="absolute inset-0 pointer-events-none flex flex-col">
+              {timeIntervals.map((interval, idx) => {
+                const iStart = timeToMins(interval);
+                const iEnd = getIntervalEnd(idx);
+                const cellHeight = ((iEnd - iStart) / defaultDuration) * hourHeight;
+                const isGap = idx > 0 && iStart > getIntervalEnd(idx - 1);
+                return (
+                  <React.Fragment key={`grid-${interval}`}>
+                    {isGap && <div style={{ height: `${gapHeight}px` }} className="w-full shrink-0 border-t border-b border-border-default/50 bg-bg-tertiary/30" />}
+                    <div className="w-full shrink-0 border-t border-border-subtle" style={{ height: `${cellHeight}px` }} />
+                  </React.Fragment>
+                )
+              })}
+            </div>
+            <div className="relative w-full h-full flex flex-col">
+              {timeIntervals.map((interval, idx) => {
+                const isActive = activeCell?.day === date.toISOString() && activeCell?.interval === interval;
+                const iStart = timeToMins(interval);
+                const iEnd = getIntervalEnd(idx);
+                const cellHeight = ((iEnd - iStart) / defaultDuration) * hourHeight;
+                const isGap = idx > 0 && iStart > getIntervalEnd(idx - 1);
+                return (
+                  <React.Fragment key={`drop-${interval}`}>
+                    {isGap && (
+                      <div className="w-full shrink-0 flex items-center justify-center pointer-events-none overflow-hidden" style={{ height: `${gapHeight}px` }}>
+                        <div className="flex items-center gap-1.5 opacity-30">
+                          <div className="w-3 md:w-6 h-px bg-gray-500"></div>
+                          <span className="text-[8px] text-gray-600 font-bold tracking-widest uppercase">REST</span>
+                          <div className="w-3 md:w-6 h-px bg-gray-500"></div>
+                        </div>
+                      </div>
+                    )}
+                    <div 
+                      className={`relative shrink-0 transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
+                      style={{ height: `${cellHeight}px` }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const data = e.dataTransfer.getData('application/json');
+                        if (data) onDropEvent(JSON.parse(data), date, interval);
+                      }}
+                      onClick={() => {
+                        if (isActive) {
+                          onAddEvent('block', date, interval);
+                          setActiveCell(null);
+                        } else {
+                          setActiveCell({ day: date.toISOString(), interval });
+                        }
+                      }}
+                    >
+                      {isActive && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Plus className="text-brand opacity-80" size={24} />
+                        </div>
+                      )}
+                    </div>
+                  </React.Fragment>
+                  )
+                })}
+              </div>
+              {events.blocks.map(block => { 
+                const style = getBlockStyle(block);
+                if (style.display === 'none') return null;
+                return <div key={block.id} draggable onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('application/json', JSON.stringify({ type: 'block', id: block.id, start: block.start_time, end: block.end_time })) }} className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in shadow-sm cursor-grab active:cursor-grabbing hover:z-10 ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...style, backgroundColor: block.color }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> 
             })}
           </div>
         </div></div>

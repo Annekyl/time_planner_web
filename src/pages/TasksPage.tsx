@@ -133,7 +133,9 @@ export default function TasksPage() {
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="glass rounded-2xl p-4 md:p-5 mb-4 overflow-hidden shadow-sm">
           <h3 className="font-bold text-text-primary mb-3 text-sm">{catForm.id ? '编辑分类' : '添加分类'}</h3>
           <form onSubmit={handleAddCategory} className="flex items-center gap-2 md:gap-3">
-            <CustomColorPicker variant="square" value={catForm.color} onChange={val => setCatForm(p => ({ ...p, color: val }))} />
+            <div className="w-[42px] h-[42px] shrink-0">
+              <CustomColorPicker variant="square" value={catForm.color} onChange={val => setCatForm(p => ({ ...p, color: val }))} />
+            </div>
             <input value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} placeholder="分类名称" className="flex-1 min-w-0 px-4 py-2.5 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all duration-200" required />
             <button type="submit" className="px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-medium hover:bg-brand-hover shrink-0 shadow-none btn-press">{catForm.id ? '保存' : '添加'}</button>
           </form>

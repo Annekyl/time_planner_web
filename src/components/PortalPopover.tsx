@@ -54,25 +54,40 @@ export function PortalPopover({ isOpen, triggerRef, children, onClose, width, he
 
   if (!mounted) return null
 
-  let top = 0
+  let top: number | undefined = undefined
+  let bottom: number | undefined = undefined
   let left = 0
   let isBottomOut = false
   if (rect) {
     isBottomOut = rect.bottom + height + 8 > window.innerHeight
-    top = isBottomOut ? Math.max(8, rect.top - height - 8) : rect.bottom + 8
+    
+    if (isBottomOut) {
+      bottom = window.innerHeight - rect.top + 8
+      // If it exceeds the top of the screen, cap it
+      if (window.innerHeight - bottom - height < 8) {
+         bottom = undefined
+         top = 8
+      }
+    } else {
+      top = rect.bottom + 8
+    }
+    
     left = rect.left
     
     // Check right edge
-    const estimatedWidth = typeof width === 'number' ? width : (typeof width === 'string' && width.includes('px') ? parseInt(width) : 280)
-    if (left + estimatedWidth > window.innerWidth) {
-       left = Math.max(8, window.innerWidth - estimatedWidth - 8)
+    const actualWidth = width ? (typeof width === 'number' ? width : parseInt(width as string)) : rect.width
+    if (left + actualWidth > window.innerWidth) {
+       left = Math.max(8, window.innerWidth - actualWidth - 8)
     }
+    
+    // Also keep it within left edge if screen is very narrow
+    if (left < 8) left = 8;
   }
 
   return createPortal(
     <AnimatePresence>
       {isOpen && rect && (
-        <div ref={popoverRef} style={{ position: 'fixed', top, left, width: width || rect.width, zIndex: 99999 }}>
+        <div ref={popoverRef} style={{ position: 'fixed', top, bottom, left, width: width || rect.width, zIndex: 99999 }}>
           <motion.div
             initial={{ opacity: 0, y: isBottomOut ? 10 : -10, scaleY: 0.95 }}
             animate={{ opacity: 1, y: 0, scaleY: 1 }}
