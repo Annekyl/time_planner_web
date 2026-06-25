@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useGoals } from '../hooks/useGoals'
 import { Plus, Trash2, Edit3, Target, CheckCircle, XCircle } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { motion, type Variants } from 'framer-motion'
 
 const containerVariants: Variants = {
@@ -47,10 +47,7 @@ export default function GoalsPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="目标标题" className={inputCls} required />
             <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="目标描述（可选）" className={`${inputCls} resize-none py-3`} rows={2} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className="block text-xs font-medium text-text-secondary mb-1.5">目标日期</label><input type="date" value={form.target_date} onChange={e => setForm(p => ({ ...p, target_date: e.target.value }))} className="w-full px-4 py-2 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none" /></div>
-              <div><label className="block text-xs font-medium text-text-secondary mb-1.5">进度 ({form.progress}%)</label><input type="range" min={0} max={100} value={form.progress} onChange={e => setForm(p => ({ ...p, progress: Number(e.target.value) }))} className="w-full mt-2 accent-indigo-600" /></div>
-            </div>
+            <div><label className="block text-xs font-medium text-text-secondary mb-1.5">目标日期</label><input type="date" value={form.target_date} onChange={e => setForm(p => ({ ...p, target_date: e.target.value }))} className="w-full px-4 py-2 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none" /></div>
             <div className="flex gap-2 pt-2">
               <button type="submit" className="px-5 py-2.5 bg-brand text-white rounded-xl hover:bg-brand-hover text-sm font-medium btn-press shadow-none transition-all duration-200">{editingId ? '保存更改' : '创建目标'}</button>
               <button type="button" onClick={resetForm} className="px-5 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-border-default text-text-secondary rounded-xl hover:bg-white dark:hover:bg-gray-600 text-sm font-medium btn-press transition-all duration-200">取消</button>
@@ -73,11 +70,21 @@ export default function GoalsPage() {
                     <button onClick={() => deleteGoal(goal.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press"><Trash2 size={18} /></button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-white/50 dark:bg-gray-700/50 rounded-full h-3 overflow-hidden border border-border-default shadow-inner"><motion.div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full" initial={{ width: 0 }} animate={{ width: `${goal.progress}%` }} transition={{ duration: 1, ease: 'easeOut' }} /></div>
-                  <span className="text-sm font-bold text-brand dark:text-brand bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">{goal.progress}%</span>
-                </div>
-                {goal.target_date && <p className="text-xs font-medium text-text-secondary mt-3 bg-black/5 dark:bg-white/5 inline-block px-2 py-1 rounded-md">目标日期：{format(parseISO(goal.target_date), 'yyyy年M月d日')}</p>}
+                {goal.target_date ? (() => {
+                  const targetDate = parseISO(goal.target_date)
+                  const diff = differenceInDays(targetDate, startOfDay(new Date()))
+                  const isOverdue = diff < 0
+                  return (
+                    <div className="flex items-center justify-between bg-black/5 dark:bg-white/5 px-3 py-2 rounded-lg mt-3">
+                      <span className="text-xs font-medium text-text-secondary">目标日期：{format(targetDate, 'yyyy年M月d日')}</span>
+                      <span className={`text-[10px] md:text-xs font-bold px-2 py-1 rounded-md ${isOverdue ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : diff === 0 ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-brand'}`}>
+                        {diff > 0 ? `还有 ${diff} 天` : diff === 0 ? '就是今天' : `已逾期 ${Math.abs(diff)} 天`}
+                      </span>
+                    </div>
+                  )
+                })() : (
+                  <p className="text-xs font-medium text-text-secondary mt-3 bg-black/5 dark:bg-white/5 inline-block px-2 py-1 rounded-md">未设置目标日期</p>
+                )}
               </motion.div>
             ))}
           </motion.div>
@@ -97,10 +104,17 @@ export default function GoalsPage() {
                     <button onClick={() => deleteGoal(goal.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all duration-200 btn-press"><Trash2 size={18} /></button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-white/50 dark:bg-gray-700/50 rounded-full h-3 border border-border-default shadow-inner"><div className="bg-green-500 h-full rounded-full" style={{ width: '100%' }} /></div>
-                  <span className="text-sm font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-md">100%</span>
-                </div>
+                {goal.target_date ? (
+                  <div className="flex items-center justify-between bg-black/5 dark:bg-white/5 px-3 py-2 rounded-lg mt-3">
+                    <span className="text-xs font-medium text-text-secondary">目标日期：{format(parseISO(goal.target_date), 'yyyy年M月d日')}</span>
+                    <span className="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">已完成</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between bg-black/5 dark:bg-white/5 px-3 py-2 rounded-lg mt-3">
+                    <span className="text-xs font-medium text-text-secondary">未设置目标日期</span>
+                    <span className="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">已完成</span>
+                  </div>
+                )}
               </motion.div>
             ))}
           </motion.div>

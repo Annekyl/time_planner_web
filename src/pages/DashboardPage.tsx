@@ -4,7 +4,7 @@ import { useTasks } from '../hooks/useTasks'
 import { useGoals } from '../hooks/useGoals'
 import { useTimeBlocks } from '../hooks/useTimeBlocks'
 import { CheckSquare, Target, Clock, TrendingUp, AlertCircle, Calendar, ListChecks } from 'lucide-react'
-import { format, isToday, isTomorrow, parseISO } from 'date-fns'
+import { format, isToday, isTomorrow, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 
@@ -67,6 +67,36 @@ export default function DashboardPage() {
     </motion.div>
   )
 
+  const renderGoalItem = (goal: typeof goals[0], idx: number) => {
+    let daysText = '未设置目标日期'
+    let badgeClass = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+    
+    if (goal.target_date) {
+      const targetDate = parseISO(goal.target_date)
+      const diff = differenceInDays(targetDate, startOfDay(new Date()))
+      if (diff < 0) {
+        daysText = `已逾期 ${Math.abs(diff)} 天`
+        badgeClass = 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+      } else if (diff === 0) {
+        daysText = '就是今天'
+        badgeClass = 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+      } else {
+        daysText = `还有 ${diff} 天`
+        badgeClass = 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-brand'
+      }
+    }
+
+    return (
+      <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }} key={goal.id} className="p-4 bg-bg-secondary backdrop-blur-sm rounded-xl border border-white/20 dark:border-white/5 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] transition-all duration-300 flex items-center justify-between">
+        <div className="min-w-0 flex-1 mr-3">
+          <span className="text-sm font-semibold text-text-primary truncate block">{goal.title}</span>
+          {goal.target_date && <span className="text-xs text-text-secondary mt-1 block">{format(parseISO(goal.target_date), 'yyyy年M月d日')}</span>}
+        </div>
+        <span className={`text-[11px] font-bold shrink-0 px-2.5 py-1 rounded-md ${badgeClass}`}>{daysText}</span>
+      </motion.div>
+    )
+  }
+
   const toggleTab = (tab: typeof activeTab) => {
     setActiveTab(activeTab === tab ? 'overview' : tab)
   }
@@ -114,18 +144,13 @@ export default function DashboardPage() {
                 <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                   <TrendingUp size={18} className="text-green-600 dark:text-green-400" />
                 </div>
-                目标进度
+                目标总览
               </h2>
               {stats.activeGoals.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500"><Target size={32} className="mb-3 opacity-20" /><p className="text-sm">暂无进行中的目标</p></div>
               ) : (
                 <div className="space-y-4">
-                  {stats.activeGoals.slice(0, 5).map((goal, i) => (
-                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} key={goal.id} className="p-4 bg-bg-secondary backdrop-blur-sm rounded-xl border border-white/20 dark:border-white/5 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] transition-all duration-300">
-                      <div className="flex items-center justify-between mb-3"><span className="text-sm font-semibold text-text-secondary truncate mr-3">{goal.title}</span><span className="text-xs font-bold text-brand dark:text-brand shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full">{goal.progress}%</span></div>
-                      <div className="w-full bg-gray-100 dark:bg-gray-700/50 rounded-full h-2.5 overflow-hidden shadow-inner"><motion.div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${goal.progress}%` }} transition={{ duration: 1, ease: "easeOut", delay: 0.2 + i * 0.1 }} /></div>
-                    </motion.div>
-                  ))}
+                  {stats.activeGoals.slice(0, 5).map(renderGoalItem)}
                 </div>
               )}
             </div>
@@ -151,12 +176,7 @@ export default function DashboardPage() {
             <h2 className="text-lg font-bold text-text-primary mb-5 flex items-center gap-2.5"><Target size={20} className="text-green-500" /> 进行中目标</h2>
             {stats.activeGoals.length === 0 ? <p className="text-sm text-gray-500 text-center py-8">暂无进行中的目标。</p> : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {stats.activeGoals.map((goal, i) => (
-                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} key={goal.id} className="p-4 bg-bg-secondary backdrop-blur-sm rounded-xl border border-white/20 dark:border-white/5 hover:border-[#D6D3CD] dark:hover:border-[#4A4844] transition-all duration-300">
-                    <div className="flex items-center justify-between mb-3"><span className="text-sm font-semibold text-text-secondary truncate mr-3">{goal.title}</span><span className="text-xs font-bold text-brand dark:text-brand shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full">{goal.progress}%</span></div>
-                    <div className="w-full bg-gray-100 dark:bg-gray-700/50 rounded-full h-2.5 overflow-hidden shadow-inner"><motion.div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${goal.progress}%` }} transition={{ duration: 1, ease: "easeOut", delay: i * 0.05 }} /></div>
-                  </motion.div>
-                ))}
+                {stats.activeGoals.map(renderGoalItem)}
               </div>
             )}
           </motion.div>
