@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { Play, Pause, RotateCcw, Timer, Minimize2, CloudRain, Coffee, Waves, VolumeX, GripHorizontal, Settings } from 'lucide-react'
+import { Play, Pause, RotateCcw, Timer, Minimize2, VolumeX, GripHorizontal, Settings, Music } from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion'
+import jasmineMusic from '../../public/music/jasmine_flower.mp3'
 
 type Mode = 'work' | 'shortBreak' | 'longBreak'
-type Sound = 'none' | 'rain' | 'cafe' | 'ocean'
+type Sound = 'none' | 'music'
 
 const DEFAULT_TIMES = {
   work: 25 * 60,
@@ -13,9 +14,7 @@ const DEFAULT_TIMES = {
 
 const AMBIENT_SOUNDS: { id: Sound; icon: any; url: string; label: string }[] = [
   { id: 'none', icon: VolumeX, url: '', label: '静音' },
-  { id: 'rain', icon: CloudRain, url: 'https://actions.google.com/sounds/v1/weather/rain_on_roof.ogg', label: '下雨天' },
-  { id: 'cafe', icon: Coffee, url: 'https://actions.google.com/sounds/v1/crowds/cafe_restaurant_chatter.ogg', label: '咖啡馆' },
-  { id: 'ocean', icon: Waves, url: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg', label: '海浪' }
+  { id: 'music', icon: Music, url: jasmineMusic, label: '茉莉花' }
 ]
 
 export default function PomodoroWidget() {
