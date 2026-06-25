@@ -16,8 +16,9 @@ const itemVariants: Variants = {
 }
 
 export default function TasksPage() {
+  const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9']
   const { user } = useAuth()
-  const { tasks, categories, addTask, updateTask, deleteTask, addCategory } = useTasks(user?.id)
+  const { tasks, categories, addTask, updateTask, deleteTask, addCategory, updateCategory, deleteCategory } = useTasks(user?.id)
   const [showForm, setShowForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -26,7 +27,7 @@ export default function TasksPage() {
   const [form, setForm] = useState({ title: '', description: '', priority: 2 as 1 | 2 | 3 | 4, status: 'pending' as 'pending' | 'in_progress' | 'completed' | 'cancelled', due_date: '', category_id: '' })
   const [formSubtasks, setFormSubtasks] = useState<{completed: boolean, text: string}[]>([])
   const [formRecurrence, setFormRecurrence] = useState<{ type: 'none' | 'daily' | 'weekly' | 'monthly' | 'custom', interval: number, unit: 'days' | 'weeks' | 'months' }>({ type: 'none', interval: 1, unit: 'days' })
-  const [catForm, setCatForm] = useState({ name: '', color: '#3b82f6' })
+  const [catForm, setCatForm] = useState({ id: '', name: '', color: PRESET_COLORS[0] })
 
   const parseDescription = (desc: string) => {
     const lines = (desc || '').split('\n')
@@ -76,7 +77,23 @@ export default function TasksPage() {
     parsed.subtasks[index].completed = !parsed.subtasks[index].completed
     await updateTask(task.id, { description: buildDescription(parsed.description, parsed.subtasks) })
   }
-  const handleAddCategory = async (e: React.FormEvent) => { e.preventDefault(); await addCategory(catForm.name, catForm.color); setCatForm({ name: '', color: '#3b82f6' }); setShowCategoryForm(false) }
+  const handleOpenCategoryForm = () => {
+    if (showCategoryForm) setShowCategoryForm(false)
+    else {
+      setCatForm({ id: '', name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] })
+      setShowCategoryForm(true)
+    }
+  }
+  const handleAddCategory = async (e: React.FormEvent) => { 
+    e.preventDefault(); 
+    if (catForm.id) {
+      await updateCategory(catForm.id, { name: catForm.name, color: catForm.color });
+      setShowCategoryForm(false);
+    } else {
+      await addCategory(catForm.name, catForm.color);
+      setCatForm({ id: '', name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] }); 
+    }
+  }
   const filteredTasks = tasks.filter(t => { if (filterStatus !== 'all' && t.status !== filterStatus) return false; if (filterCategory !== 'all' && t.category_id !== filterCategory) return false; return true })
   const priorityLabel: Record<number, string> = { 1: '低', 2: '中', 3: '高', 4: '紧急' }
   const priorityColor: Record<number, string> = { 1: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400', 2: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', 3: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', 4: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
@@ -93,21 +110,30 @@ export default function TasksPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-text-primary">任务管理</h1>
         <div className="flex gap-2">
-          <button onClick={() => setShowCategoryForm(!showCategoryForm)} className="px-3 md:px-4 py-2 text-xs md:text-sm bg-bg-secondary border border-border-default text-text-secondary rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all duration-200 btn-press">分类</button>
+          <button onClick={handleOpenCategoryForm} className="px-3 md:px-4 py-2 text-xs md:text-sm bg-bg-secondary border border-border-default text-text-secondary rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all duration-200 btn-press">分类</button>
           <button onClick={() => { resetForm(); setShowForm(true) }} className="px-3 md:px-4 py-2 bg-brand text-white rounded-xl hover:bg-brand-hover transition-all duration-200 flex items-center gap-1.5 text-xs md:text-sm shadow-none btn-press"><Plus size={16} /><span className="hidden sm:inline">新建任务</span><span className="sm:hidden">新建</span></button>
         </div>
       </motion.div>
 
       {showCategoryForm && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="glass rounded-2xl p-4 md:p-5 mb-4 overflow-hidden shadow-sm">
-          <h3 className="font-bold text-text-primary mb-3 text-sm">添加分类</h3>
+          <h3 className="font-bold text-text-primary mb-3 text-sm">{catForm.id ? '编辑分类' : '添加分类'}</h3>
           <form onSubmit={handleAddCategory} className="flex items-center gap-2 md:gap-3">
             <input type="color" value={catForm.color} onChange={e => setCatForm(p => ({ ...p, color: e.target.value }))} className="w-10 h-10 rounded-xl cursor-pointer shrink-0 border-0 p-0" />
             <input value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} placeholder="分类名称" className="flex-1 min-w-0 px-4 py-2.5 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all duration-200" required />
-            <button type="submit" className="px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-medium hover:bg-brand-hover shrink-0 shadow-none btn-press">添加</button>
+            <button type="submit" className="px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-medium hover:bg-brand-hover shrink-0 shadow-none btn-press">{catForm.id ? '保存' : '添加'}</button>
           </form>
           <div className="flex gap-2 mt-4 flex-wrap">
-            {categories.map(c => (<motion.span initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} key={c.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-white/10 shadow-sm" style={{ backgroundColor: c.color + '20', color: c.color }}><span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />{c.name}</motion.span>))}
+            {categories.map(c => (
+              <motion.span initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} key={c.id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border border-white/10 shadow-sm group" style={{ backgroundColor: c.color + '20', color: c.color }}>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                {c.name}
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1 -mr-1">
+                  <button type="button" onClick={() => { setCatForm({ id: c.id, name: c.name, color: c.color }); setShowCategoryForm(true); }} className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded"><Edit3 size={12} /></button>
+                  <button type="button" onClick={async () => { if(confirm('确定要删除分类吗？相关的任务将失去分类。')) await deleteCategory(c.id); }} className="p-0.5 hover:bg-red-500/20 text-red-500 rounded"><Trash2 size={12} /></button>
+                </div>
+              </motion.span>
+            ))}
           </div>
         </motion.div>
       )}

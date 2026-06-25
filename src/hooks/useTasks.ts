@@ -80,5 +80,16 @@ export function useTasks(userId: string | undefined) {
     return { error }
   }
 
-  return { tasks, categories, loading, addTask, updateTask, deleteTask, addCategory, deleteCategory, refetch: fetchTasks }
+  const updateCategory = async (id: string, updates: Partial<Category>) => {
+    const { data, error } = await supabase
+      .from('categories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    if (!error && data) setCategories(prev => prev.map(c => c.id === id ? data as Category : c))
+    return { data, error }
+  }
+
+  return { tasks, categories, loading, addTask, updateTask, deleteTask, addCategory, updateCategory, deleteCategory, refetch: fetchTasks }
 }
