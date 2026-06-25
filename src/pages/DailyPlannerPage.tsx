@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { useSettings } from '../hooks/useSettings'
 import { useTasks } from '../hooks/useTasks'
 import { useTimeBlocks } from '../hooks/useTimeBlocks'
 import type { TimeBlock } from '../types'
@@ -19,16 +20,21 @@ const itemVariants: Variants = {
 }
 
 type Period = 'morning' | 'afternoon' | 'evening'
-const PERIODS: { key: Period; label: string; sub: string; icon: any; color: string; bg: string; darkBg: string }[] = [
-  { key: 'morning', label: '上午', sub: '6:00 - 12:00', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50/50', darkBg: 'dark:bg-amber-900/20' },
-  { key: 'afternoon', label: '下午', sub: '12:00 - 18:00', icon: CloudSun, color: 'text-orange-500', bg: 'bg-orange-50/50', darkBg: 'dark:bg-orange-900/20' },
-  { key: 'evening', label: '晚上', sub: '18:00 - 24:00', icon: Moon, color: 'text-indigo-500', bg: 'bg-indigo-50/50', darkBg: 'dark:bg-indigo-900/20' },
-]
+interface PeriodDef {
+  key: Period
+  label: string
+  sub: string
+  icon: any
+  color: string
+  bg: string
+  darkBg: string
+}
 
 const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9']
 
 export default function DailyPlannerPage() {
   const { user } = useAuth()
+  const { settings } = useSettings(user?.id)
   const { tasks } = useTasks(user?.id)
   const { timeBlocks, addTimeBlock, toggleTimeBlock, deleteTimeBlock } = useTimeBlocks(user?.id)
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -49,16 +55,26 @@ export default function DailyPlannerPage() {
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd')
 
+  const morningStart = settings.morning_start
+  const afternoonStart = settings.afternoon_start
+  const eveningStart = settings.evening_start
+
+  const PERIODS: PeriodDef[] = useMemo(() => [
+    { key: 'morning' as Period, label: '上午', sub: `${morningStart} - ${afternoonStart}`, icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50/50', darkBg: 'dark:bg-amber-900/20' },
+    { key: 'afternoon' as Period, label: '下午', sub: `${afternoonStart} - ${eveningStart}`, icon: CloudSun, color: 'text-orange-500', bg: 'bg-orange-50/50', darkBg: 'dark:bg-orange-900/20' },
+    { key: 'evening' as Period, label: '晚上', sub: `${eveningStart} - 24:00`, icon: Moon, color: 'text-indigo-500', bg: 'bg-indigo-50/50', darkBg: 'dark:bg-indigo-900/20' },
+  ], [morningStart, afternoonStart, eveningStart])
+
   const timeBlocksByPeriod = useMemo(() => {
     const grouped: Record<Period, TimeBlock[]> = { morning: [], afternoon: [], evening: [] }
     timeBlocks.filter(b => b.date === dateStr).forEach(b => {
-      const h = parseInt(b.start_time.split(':')[0], 10)
-      if (h >= 6 && h < 12) grouped.morning.push(b)
-      else if (h >= 12 && h < 18) grouped.afternoon.push(b)
-      else if (h >= 18 || h < 6) grouped.evening.push(b)
+      const time = b.start_time
+      if (time >= morningStart && time < afternoonStart) grouped.morning.push(b)
+      else if (time >= afternoonStart && time < eveningStart) grouped.afternoon.push(b)
+      else grouped.evening.push(b)
     })
     return grouped
-  }, [timeBlocks, dateStr])
+  }, [timeBlocks, dateStr, morningStart, afternoonStart, eveningStart])
 
   const openModal = (period: Period, defaultTitle = '', defaultTaskId: string | null = null) => {
     setShowAddModal(period)
@@ -67,9 +83,9 @@ export default function DailyPlannerPage() {
     setFormColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)])
     setFormRecurrence({ type: 'none', interval: 1, unit: 'days' })
     
-    if (period === 'morning') { setFormTime('09:00'); setFormEndTime('10:00') }
-    else if (period === 'afternoon') { setFormTime('14:00'); setFormEndTime('15:00') }
-    else { setFormTime('19:00'); setFormEndTime('20:00') }
+    if (period === 'morning') { setFormTime(morningStart); setFormEndTime(String(parseInt(morningStart)+1).padStart(2, '0') + ':00') }
+    else if (period === 'afternoon') { setFormTime(afternoonStart); setFormEndTime(String(parseInt(afternoonStart)+1).padStart(2, '0') + ':00') }
+    else { setFormTime(eveningStart); setFormEndTime(String(parseInt(eveningStart)+1).padStart(2, '0') + ':00') }
   }
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -231,7 +247,7 @@ export default function DailyPlannerPage() {
 }
 
 function PeriodSection({ period, timeBlocks, onAdd, onToggle, onDelete, onAddFromTask }: {
-  period: typeof PERIODS[0]; timeBlocks: TimeBlock[]; onAdd: () => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string) => void; onAddFromTask: () => void
+  period: PeriodDef; timeBlocks: TimeBlock[]; onAdd: () => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string) => void; onAddFromTask: () => void
 }) {
   const Icon = period.icon
   const completedCount = timeBlocks.filter(i => i.completed).length

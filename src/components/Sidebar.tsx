@@ -2,9 +2,10 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../lib/theme'
 
-import { LayoutDashboard, CheckSquare, Calendar, Target, BarChart3, CalendarDays, LogOut, Sun, Moon, HelpCircle } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, Calendar, Target, BarChart3, CalendarDays, LogOut, Sun, Moon, HelpCircle, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import UserGuideModal from './UserGuideModal'
+import SettingsModal from './SettingsModal'
 import { useState, useEffect } from 'react'
 
 const navItems = [
@@ -21,6 +22,7 @@ export default function Sidebar() {
   const location = useLocation()
   const { theme, toggle } = useTheme()
   const [showGuide, setShowGuide] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     const hasSeenGuide = localStorage.getItem(`hasSeenGuide_${user?.id}`)
@@ -33,6 +35,7 @@ export default function Sidebar() {
   return (
     <>
       <UserGuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <aside className="hidden md:flex w-64 bg-transparent border-r border-border-subtle dark:border-border-subtle flex-col h-screen fixed left-0 top-0 z-30 transition-colors duration-300">
         <div className="p-6 border-b border-border-subtle dark:border-border-subtle flex items-center justify-between">
           <h1 className="text-xl font-bold font-serif text-brand dark:text-brand">
@@ -76,6 +79,13 @@ export default function Sidebar() {
         </nav>
         <div className="p-4 border-t border-border-subtle dark:border-border-subtle space-y-2">
           <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary dark:text-text-secondary hover:bg-gray-100/50 dark:hover:bg-gray-800/50 hover:text-text-primary dark:hover:text-gray-100 w-full transition-all duration-300 btn-press"
+          >
+            <Settings size={20} />
+            偏好设置
+          </button>
+          <button
             onClick={() => setShowGuide(true)}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary dark:text-text-secondary hover:bg-gray-100/50 dark:hover:bg-gray-800/50 hover:text-text-primary dark:hover:text-gray-100 w-full transition-all duration-300 btn-press"
           >
@@ -96,6 +106,9 @@ export default function Sidebar() {
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-bg-page/80 dark:bg-bg-page/80 backdrop-blur-md border-b border-border-subtle dark:border-border-subtle z-30 flex items-center justify-between px-4 transition-colors duration-300">
         <h1 className="text-lg font-bold font-serif text-brand dark:text-brand">时间规划</h1>
         <div className="flex items-center gap-1">
+          <button onClick={() => setShowSettings(true)} className="p-2 rounded-xl text-text-secondary hover:bg-bg-tertiary transition-colors btn-press">
+            <Settings size={20} />
+          </button>
           <button onClick={() => setShowGuide(true)} className="p-2 rounded-xl text-text-secondary hover:bg-bg-tertiary transition-colors btn-press">
             <HelpCircle size={20} />
           </button>

@@ -63,3 +63,13 @@ export interface User {
   id: string
   email: string
 }
+
+export interface UserSettings {
+  user_id: string
+  morning_start: string
+  afternoon_start: string
+  evening_start: string
+  hour_height: number
+  created_at: string
+  updated_at: string
+}
