@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useStats } from '../hooks/useStats'
+import { useGoals } from '../hooks/useGoals'
 import { BarChart3, TrendingUp, CheckCircle, Clock, Target } from 'lucide-react'
 import { format, parseISO, isToday, isTomorrow, differenceInDays, startOfDay } from 'date-fns'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
@@ -21,6 +22,7 @@ const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#
 export default function StatsPage() {
   const { user } = useAuth()
   const { stats: statsData } = useStats(user?.id)
+  const { goals } = useGoals(user?.id)
   const [activeTab, setActiveTab] = useState<'completed' | 'in_progress' | 'goals' | null>(null)
 
   const priorityLabel: Record<number, string> = { 1: '低', 2: '中', 3: '高', 4: '紧急' }
@@ -166,11 +168,10 @@ export default function StatsPage() {
           </div>
         </motion.div>
         <motion.div variants={itemVariants} className="glass rounded-3xl p-5 md:p-6 shadow-sm border-white/20 card-hover">
-          <h3 className="font-bold text-text-primary mb-4 text-sm md:text-base border-b border-black/5 dark:border-white/5 pb-3">目标进度</h3>
+          <h3 className="font-bold text-text-primary mb-4 text-sm md:text-base border-b border-black/5 dark:border-white/5 pb-3">目标概览</h3>
           <div className="space-y-3">
             <div className="flex justify-between text-sm"><span className="font-medium text-text-secondary">活跃目标</span><span className="font-bold text-text-primary bg-bg-secondary px-2 py-0.5 rounded-md">{stats.activeGoals}</span></div>
-            <div className="flex justify-between text-sm"><span className="font-medium text-text-secondary">平均进度</span><span className="font-bold text-brand dark:text-brand bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded-md">{stats.avgGoalProgress}%</span></div>
-            <div className="w-full bg-white/40 dark:bg-gray-700/40 rounded-full h-3 mt-4 overflow-hidden border border-white/20 shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${stats.avgGoalProgress}%` }} transition={{ duration: 1 }} className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full" /></div>
+            <div className="flex justify-between text-sm"><span className="font-medium text-text-secondary">已完成目标</span><span className="font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-md">{goals.filter(g => g.status === 'completed').length}</span></div>
           </div>
         </motion.div>
       </div>
