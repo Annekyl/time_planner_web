@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 export function useDashboard(userId: string | undefined) {
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [rpcError, setRpcError] = useState<string | null>(null)
 
   const fetchDashboardData = async () => {
     if (!userId) return
@@ -12,6 +13,9 @@ export function useDashboard(userId: string | undefined) {
     const { data, error } = await supabase.rpc('get_dashboard_data', { user_uuid: userId, current_date_str: todayStr })
     if (!error && data) {
       setDashboardData(data)
+    } else if (error) {
+      console.error("RPC Error:", error)
+      setRpcError(error.message)
     }
     setLoading(false)
   }
@@ -22,5 +26,5 @@ export function useDashboard(userId: string | undefined) {
     }
   }, [userId])
 
-  return { dashboardData, loading, refetch: fetchDashboardData }
+  return { dashboardData, loading, rpcError, refetch: fetchDashboardData }
 }

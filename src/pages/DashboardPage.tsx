@@ -18,7 +18,7 @@ const itemVariants: Variants = {
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const { dashboardData } = useDashboard(user?.id)
+  const { dashboardData, loading, rpcError } = useDashboard(user?.id)
   const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'today' | 'goals' | 'blocks'>('overview')
 
   const stats = dashboardData || { todayTasks: [], pendingTasks: [], todayBlocks: [], activeGoals: [], upcomingTasks: [] }
@@ -93,6 +93,11 @@ export default function DashboardPage() {
       initial="hidden"
       animate="show"
     >
+      {rpcError && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 font-medium border border-red-200">
+          RPC Error: {rpcError}
+        </div>
+      )}
       <motion.div variants={itemVariants} className="mb-8 md:mb-10">
         <h1 className="text-2xl md:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 tracking-tight">
           {format(new Date(), 'yyyy年M月d日 EEEE', { locale: zhCN })}
@@ -101,10 +106,10 @@ export default function DashboardPage() {
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-8 md:mb-10">
-        <StatCard icon={CheckSquare} label="待办任务" value={stats.pendingTasks.length} gradient="from-blue-500 to-cyan-400" shadow="shadow-blue-500/20" isActive={activeTab === 'pending'} onClick={() => toggleTab('pending')} />
-        <StatCard icon={Calendar} label="今日任务" value={stats.todayTasks.length} gradient="from-purple-500 to-pink-500" shadow="shadow-purple-500/20" isActive={activeTab === 'today'} onClick={() => toggleTab('today')} />
-        <StatCard icon={Target} label="进行中目标" value={stats.activeGoals.length} gradient="from-green-500 to-emerald-400" shadow="shadow-green-500/20" isActive={activeTab === 'goals'} onClick={() => toggleTab('goals')} />
-        <StatCard icon={Clock} label="今日时间块" value={stats.todayBlocks.length} gradient="from-amber-500 to-orange-400" shadow="shadow-amber-500/20" isActive={activeTab === 'blocks'} onClick={() => toggleTab('blocks')} />
+        <StatCard icon={CheckSquare} label="待办任务" value={stats.pendingTasksCount ?? stats.pendingTasks.length} gradient="from-blue-500 to-cyan-400" shadow="shadow-blue-500/20" isActive={activeTab === 'pending'} onClick={() => toggleTab('pending')} />
+        <StatCard icon={Calendar} label="今日任务" value={stats.todayTasksCount ?? stats.todayTasks.length} gradient="from-purple-500 to-pink-500" shadow="shadow-purple-500/20" isActive={activeTab === 'today'} onClick={() => toggleTab('today')} />
+        <StatCard icon={Target} label="进行中目标" value={stats.activeGoalsCount ?? stats.activeGoals.length} gradient="from-green-500 to-emerald-400" shadow="shadow-green-500/20" isActive={activeTab === 'goals'} onClick={() => toggleTab('goals')} />
+        <StatCard icon={Clock} label="今日时间块" value={stats.todayBlocksCount ?? stats.todayBlocks.length} gradient="from-amber-500 to-orange-400" shadow="shadow-amber-500/20" isActive={activeTab === 'blocks'} onClick={() => toggleTab('blocks')} />
       </motion.div>
 
       <AnimatePresence mode="wait">

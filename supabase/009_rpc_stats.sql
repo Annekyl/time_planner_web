@@ -25,7 +25,7 @@ BEGIN
   SELECT count(*) INTO v_total_tasks FROM tasks WHERE user_id = user_uuid;
   SELECT count(*) INTO v_completed_tasks FROM tasks WHERE user_id = user_uuid AND status = 'completed';
   SELECT count(*) INTO v_pending_tasks FROM tasks WHERE user_id = user_uuid AND status = 'pending';
-  SELECT count(*) INTO v_in_progress_tasks FROM tasks WHERE user_id = user_uuid AND status = 'in_progress';
+  SELECT count(*) INTO v_in_progress_tasks FROM tasks WHERE user_id = user_uuid AND status IN ('pending', 'in_progress');
   
   -- 时间块统计
   SELECT count(*) INTO v_total_blocks FROM time_blocks WHERE user_id = user_uuid;
@@ -71,9 +71,9 @@ BEGIN
   SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) INTO v_completed_list 
   FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = tasks.category_id) as category FROM tasks WHERE user_id = user_uuid AND status = 'completed' ORDER BY completed_at DESC NULLS LAST LIMIT 50) t;
 
-  -- 进行中任务 (列表渲染用，最多取50条)
+  -- 进行中任务 (包含待办和进行中，列表渲染用，最多取50条)
   SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) INTO v_in_progress_list 
-  FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = tasks.category_id) as category FROM tasks WHERE user_id = user_uuid AND status = 'in_progress' ORDER BY created_at DESC LIMIT 50) t;
+  FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = tasks.category_id) as category FROM tasks WHERE user_id = user_uuid AND status IN ('pending', 'in_progress') ORDER BY created_at DESC LIMIT 50) t;
 
   -- 活跃目标 (列表渲染用)
   SELECT COALESCE(json_agg(row_to_json(g)), '[]'::json) INTO v_active_goals_list 
@@ -104,31 +104,46 @@ CREATE OR REPLACE FUNCTION get_dashboard_data(user_uuid UUID, current_date_str T
 RETURNS JSON AS $$
 DECLARE
   v_today_tasks JSON;
+  v_today_tasks_count INT;
   v_pending_tasks JSON;
+  v_pending_tasks_count INT;
   v_today_blocks JSON;
+  v_today_blocks_count INT;
   v_active_goals JSON;
+  v_active_goals_count INT;
   v_upcoming_tasks JSON;
 BEGIN
+  -- 获取总数
+  SELECT count(*) INTO v_today_tasks_count FROM tasks WHERE user_id = user_uuid AND due_date = current_date_str::date;
+  SELECT count(*) INTO v_pending_tasks_count FROM tasks WHERE user_id = user_uuid AND status IN ('pending', 'in_progress');
+  SELECT count(*) INTO v_today_blocks_count FROM time_blocks WHERE user_id = user_uuid AND date = current_date_str::date;
+  SELECT count(*) INTO v_active_goals_count FROM goals WHERE user_id = user_uuid AND status = 'active';
+
+  -- 获取列表数据
   SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) INTO v_today_tasks 
-  FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = tasks.category_id) as category FROM tasks WHERE user_id = user_uuid AND due_date = current_date_str ORDER BY priority DESC, created_at DESC) t;
+  FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = tasks.category_id) as category FROM tasks WHERE user_id = user_uuid AND due_date = current_date_str::date ORDER BY priority DESC, created_at DESC) t;
   
   SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) INTO v_pending_tasks 
   FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = tasks.category_id) as category FROM tasks WHERE user_id = user_uuid AND status IN ('pending', 'in_progress') ORDER BY priority DESC, created_at DESC LIMIT 50) t;
   
   SELECT COALESCE(json_agg(row_to_json(b)), '[]'::json) INTO v_today_blocks 
-  FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = time_blocks.category_id) as category FROM time_blocks WHERE user_id = user_uuid AND date = current_date_str ORDER BY start_time) b;
+  FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = time_blocks.category_id) as category FROM time_blocks WHERE user_id = user_uuid AND date = current_date_str::date ORDER BY start_time) b;
   
   SELECT COALESCE(json_agg(row_to_json(g)), '[]'::json) INTO v_active_goals 
   FROM (SELECT * FROM goals WHERE user_id = user_uuid AND status = 'active' ORDER BY target_date ASC NULLS LAST) g;
   
   SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) INTO v_upcoming_tasks 
-  FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = tasks.category_id) as category FROM tasks WHERE user_id = user_uuid AND due_date IS NOT NULL AND due_date >= current_date_str AND status NOT IN ('completed', 'cancelled') ORDER BY due_date ASC LIMIT 5) t;
+  FROM (SELECT *, (SELECT row_to_json(c) FROM categories c WHERE c.id = tasks.category_id) as category FROM tasks WHERE user_id = user_uuid AND due_date IS NOT NULL AND due_date >= current_date_str::date AND status NOT IN ('completed', 'cancelled') ORDER BY due_date ASC LIMIT 5) t;
 
   RETURN json_build_object(
     'todayTasks', v_today_tasks,
+    'todayTasksCount', v_today_tasks_count,
     'pendingTasks', v_pending_tasks,
+    'pendingTasksCount', v_pending_tasks_count,
     'todayBlocks', v_today_blocks,
+    'todayBlocksCount', v_today_blocks_count,
     'activeGoals', v_active_goals,
+    'activeGoalsCount', v_active_goals_count,
     'upcomingTasks', v_upcoming_tasks
   );
 END;
