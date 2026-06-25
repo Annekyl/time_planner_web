@@ -43,6 +43,10 @@ export default function DailyPlannerPage() {
   const [formTaskId, setFormTaskId] = useState<string | null>(null)
   const [formRecurrence, setFormRecurrence] = useState<{ type: 'none' | 'daily' | 'weekly' | 'monthly' | 'custom', interval: number, unit: 'days' | 'weeks' | 'months' }>({ type: 'none', interval: 1, unit: 'days' })
 
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const minSwipeDistance = 50
+
   const dateStr = format(selectedDate, 'yyyy-MM-dd')
 
   const timeBlocksByPeriod = useMemo(() => {
@@ -99,12 +103,33 @@ export default function DailyPlannerPage() {
   const completedCount = timeBlocks.filter(b => b.date === dateStr && b.completed).length
   const totalCount = timeBlocks.filter(b => b.date === dateStr).length
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+  const onTouchEndEvent = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe) {
+      setSelectedDate(d => addDays(d, 1))
+    } else if (isRightSwipe) {
+      setSelectedDate(d => subDays(d, 1))
+    }
+  }
+
   return (
     <motion.div 
       className="max-w-3xl mx-auto relative"
       variants={containerVariants}
       initial="hidden"
       animate="show"
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEndEvent}
     >
       <motion.div variants={itemVariants} className="flex items-center justify-between mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold font-serif text-text-primary">每日规划</h1>

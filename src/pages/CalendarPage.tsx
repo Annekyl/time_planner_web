@@ -26,6 +26,10 @@ export default function CalendarPage() {
   const [formEndTime, setFormEndTime] = useState('10:00')
   const [formColor, setFormColor] = useState('#6366f1')
 
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const minSwipeDistance = 50
+
   const monthDays = useMemo(() => { const ms = startOfMonth(selectedDate); const me = endOfMonth(selectedDate); return eachDayOfInterval({ start: startOfWeek(ms), end: endOfWeek(me) }) }, [selectedDate])
   const weekDays = useMemo(() => { const ws = startOfWeek(selectedDate); return eachDayOfInterval({ start: ws, end: addDays(ws, 6) }) }, [selectedDate])
   const getEventsForDay = (date: Date) => { const ds = format(date, 'yyyy-MM-dd'); return { tasks: tasks.filter(t => t.due_date === ds), blocks: timeBlocks.filter(b => b.date === ds).sort((a, b) => a.start_time.localeCompare(b.start_time)) } }
@@ -68,8 +72,32 @@ export default function CalendarPage() {
     }
   }
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+  const onTouchEndEvent = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe) {
+      if (viewMode === 'month') setSelectedDate(d => addMonths(d, 1))
+      else if (viewMode === 'week') setSelectedDate(d => addWeeks(d, 1))
+      else setSelectedDate(d => addDays(d, 1))
+    } else if (isRightSwipe) {
+      if (viewMode === 'month') setSelectedDate(d => subMonths(d, 1))
+      else if (viewMode === 'week') setSelectedDate(d => subWeeks(d, 1))
+      else setSelectedDate(d => subDays(d, 1))
+    }
+  }
+
   return (
-    <div className="max-w-6xl mx-auto relative">
+    <div className="max-w-6xl mx-auto relative" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEndEvent}>
       <div className="flex flex-wrap items-center justify-between mb-4 md:mb-6 gap-3 fade-in">
         <h1 className="text-xl md:text-2xl font-bold font-serif text-text-primary">日历规划</h1>
         <div className="flex items-center gap-2">
@@ -139,15 +167,15 @@ export default function CalendarPage() {
 function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsForDay, onAddEvent }: { days: Date[]; currentMonth: Date; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void }) {
   return (
     <div className="glass p-3 md:p-6 fade-in" style={{ animationDelay: '0.1s' }}>
-      <div className="grid grid-cols-7 gap-0.5 md:gap-1">
-        {['一', '二', '三', '四', '五', '六', '日'].map(d => <div key={d} className="text-center text-[10px] md:text-xs font-medium text-gray-500 dark:text-gray-400 py-1 md:py-2">{d}</div>)}
+      <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700/50 rounded-xl overflow-hidden">
+        {['一', '二', '三', '四', '五', '六', '日'].map(d => <div key={d} className="text-center text-[10px] md:text-xs font-bold text-gray-500 dark:text-gray-400 py-2 bg-white dark:bg-[#1A1918]">{d}</div>)}
         {days.map(day => { const inMonth = isSameMonth(day, currentMonth); const selected = isSameDay(day, selectedDate); const today = isToday(day); const events = getEventsForDay(day); return (
-          <div key={day.toISOString()} onClick={() => onSelectDate(day)} onDoubleClick={(e) => { e.stopPropagation(); onAddEvent('task', day); }} className={`relative p-1 md:p-2 min-h-[64px] md:min-h-[96px] rounded-lg text-left transition-all duration-200 cursor-pointer group ${!inMonth ? 'text-gray-300 dark:text-gray-600' : selected ? 'bg-bg-tertiary ring-1 ring-[#D6D3CD] dark:ring-[#4A4844]' : 'hover:bg-bg-tertiary'}`}>
+          <div key={day.toISOString()} onClick={() => onSelectDate(day)} onDoubleClick={(e) => { e.stopPropagation(); onAddEvent('task', day); }} className={`relative p-1 md:p-2 min-h-[80px] md:min-h-[100px] text-left transition-all duration-200 cursor-pointer group bg-white dark:bg-[#1A1918] ${!inMonth ? 'text-gray-300 dark:text-gray-600 bg-gray-50/50 dark:bg-[#22201F]' : selected ? 'ring-2 ring-inset ring-brand bg-indigo-50/30 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-[#2A2927]'}`}>
             <div className="flex justify-between items-start">
-              <span className={`text-xs md:text-sm font-medium ${today ? 'bg-brand hover:bg-brand-hover text-white w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center' : ''}`}>{format(day, 'd')}</span>
+              <span className={`text-xs md:text-sm font-bold ${today ? 'bg-brand text-white w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center' : 'text-text-primary'}`}>{format(day, 'd')}</span>
               <button onClick={(e) => { e.stopPropagation(); onAddEvent('task', day) }} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 dark:text-gray-300 hidden md:block"><Plus size={14} /></button>
             </div>
-            <div className="mt-1 space-y-0.5 hidden md:block">{events.blocks.slice(0, 2).map(b => <div key={b.id} className={`text-[10px] rounded px-1 truncate ${b.completed ? 'opacity-60 line-through' : ''} text-white`} style={{ backgroundColor: b.color }}>{b.title}</div>)}{events.tasks.length > 0 && <div className="text-[10px] border border-border-default text-gray-600 dark:text-gray-400 rounded px-1 truncate">{events.tasks.length} 个任务</div>}</div>
+            <div className="mt-1 space-y-0.5 hidden md:block">{events.blocks.slice(0, 2).map(b => <div key={b.id} className={`text-[10px] rounded px-1 truncate ${b.completed ? 'opacity-60 line-through' : ''} text-white font-medium`} style={{ backgroundColor: b.color }}>{b.title}</div>)}{events.tasks.length > 0 && <div className="text-[10px] border border-border-default text-text-secondary font-medium rounded px-1 truncate bg-bg-tertiary/50">{events.tasks.length} 个任务</div>}</div>
             <div className="mt-1 flex flex-wrap gap-1 md:hidden">{events.tasks.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />}{events.blocks.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />}</div>
           </div>
         )})}
@@ -160,22 +188,22 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
   const HOUR_HEIGHT = 48
   return (
     <div className="glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
-      <div className="grid grid-cols-8 border-b border-border-subtle">
-        <div className="w-12 md:w-16" />
-        {days.map(day => { const selected = isSameDay(day, selectedDate); const today = isToday(day); return (
-          <div key={day.toISOString()} onClick={() => onSelectDate(day)} onDoubleClick={(e) => { e.stopPropagation(); onAddEvent('block', day); }} className={`group relative py-2 md:py-3 text-center border-l border-border-subtle transition-all duration-200 cursor-pointer ${selected ? 'bg-bg-tertiary' : 'hover:bg-bg-tertiary'}`}>
-            <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">{format(day, 'EEE', { locale: zhCN })}</p>
-            <p className={`text-sm md:text-base font-semibold mt-0.5 ${today ? 'bg-brand hover:bg-brand-hover text-white w-7 h-7 rounded-full flex items-center justify-center mx-auto' : 'text-text-primary'}`}>{format(day, 'd')}</p>
-            <button onClick={(e) => { e.stopPropagation(); onAddEvent('block', day) }} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 dark:text-gray-300 hidden md:block"><Plus size={12} /></button>
-          </div>
-        )})}
-      </div>
-      <div className="overflow-y-auto max-h-[600px]">
-        <div className="grid grid-cols-8 relative">
-          <div className="w-12 md:w-16">{HOURS.filter(h => h >= 6 && h <= 22).map(hour => <div key={hour} className="h-12 border-b border-border-subtle flex items-start justify-end pr-2 pt-0.5"><span className="text-[9px] md:text-[10px] text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span></div>)}</div>
+      <div className="overflow-y-auto max-h-[600px] relative">
+        <div className="sticky top-0 z-20 grid grid-cols-8 border-b border-gray-200 dark:border-gray-700/50 bg-white/95 dark:bg-[#1A1918]/95 backdrop-blur-md shadow-sm">
+          <div className="w-12 md:w-16" />
+          {days.map(day => { const selected = isSameDay(day, selectedDate); const today = isToday(day); return (
+            <div key={day.toISOString()} onClick={() => onSelectDate(day)} onDoubleClick={(e) => { e.stopPropagation(); onAddEvent('block', day); }} className={`group relative py-2 md:py-3 text-center border-l border-gray-200 dark:border-gray-700/50 transition-all duration-200 cursor-pointer ${selected ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-[#2A2927]'}`}>
+              <p className="text-[10px] md:text-xs font-medium text-gray-500 dark:text-gray-400">{format(day, 'EEE', { locale: zhCN })}</p>
+              <p className={`text-sm md:text-base font-bold mt-0.5 ${today ? 'bg-brand hover:bg-brand-hover text-white w-7 h-7 rounded-full flex items-center justify-center mx-auto' : 'text-text-primary'}`}>{format(day, 'd')}</p>
+              <button onClick={(e) => { e.stopPropagation(); onAddEvent('block', day) }} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 dark:text-gray-300 hidden md:block"><Plus size={12} /></button>
+            </div>
+          )})}
+        </div>
+        <div className="grid grid-cols-8 relative bg-white dark:bg-[#1A1918]">
+          <div className="w-12 md:w-16">{HOURS.filter(h => h >= 6 && h <= 22).map(hour => <div key={hour} className="h-12 border-b border-gray-200 dark:border-gray-700/50 flex items-start justify-end pr-2 pt-0.5"><span className="text-[9px] md:text-[10px] font-medium text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span></div>)}</div>
           {days.map(day => { const events = getEventsForDay(day); return (
-            <div key={day.toISOString()} className="relative border-l border-border-subtle cursor-crosshair" onDoubleClick={(e) => { e.stopPropagation(); const y = e.clientY - e.currentTarget.getBoundingClientRect().top; let h = Math.floor(y / 48) + 6; h = Math.max(6, Math.min(22, h)); onAddEvent('block', day, `${String(h).padStart(2, '0')}:00`); }}>
-              {HOURS.filter(h => h >= 6 && h <= 22).map(hour => <div key={hour} className="h-12 border-b border-border-subtle" />)}
+            <div key={day.toISOString()} className="relative border-l border-gray-200 dark:border-gray-700/50 cursor-crosshair" onDoubleClick={(e) => { e.stopPropagation(); const y = e.clientY - e.currentTarget.getBoundingClientRect().top; let h = Math.floor(y / 48) + 6; h = Math.max(6, Math.min(22, h)); onAddEvent('block', day, `${String(h).padStart(2, '0')}:00`); }}>
+              {HOURS.filter(h => h >= 6 && h <= 22).map(hour => <div key={hour} className="h-12 border-b border-gray-200 dark:border-gray-700/50" />)}
               {events.blocks.map(block => { const [sh, sm] = block.start_time.split(':').map(Number); if (sh < 6 || sh > 22) return null; const top = ((sh - 6) * HOUR_HEIGHT) + ((sm / 60) * HOUR_HEIGHT); const [eh, em] = block.end_time.split(':').map(Number); const height = (((eh * 60 + em) - (sh * 60 + sm)) / 60) * HOUR_HEIGHT; return <div key={block.id} className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ backgroundColor: block.color, top: `${top}px`, height: `${Math.max(height, 20)}px` }}><p className="font-medium truncate">{block.title}</p></div> })}
               {events.tasks.length > 0 && <div className="absolute bottom-1 left-0.5 right-0.5 flex flex-col gap-0.5">{events.tasks.slice(0, 2).map(t => <div key={t.id} className="bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded px-1 py-0.5 text-[9px] truncate">{t.title}</div>)}{events.tasks.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500 px-1 font-medium">+{events.tasks.length - 2}</div>}</div>}
             </div>
