@@ -4,8 +4,11 @@ import type { UserSettings } from '../types'
 
 const DEFAULT_SETTINGS: Omit<UserSettings, 'user_id' | 'created_at' | 'updated_at'> = {
   morning_start: '06:00',
+  morning_end: '12:00',
   afternoon_start: '12:00',
+  afternoon_end: '18:00',
   evening_start: '18:00',
+  evening_end: '23:59',
   hour_height: 48
 }
 

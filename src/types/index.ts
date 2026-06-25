@@ -67,8 +67,11 @@ export interface User {
 export interface UserSettings {
   user_id: string
   morning_start: string
+  morning_end: string
   afternoon_start: string
+  afternoon_end: string
   evening_start: string
+  evening_end: string
   hour_height: number
   created_at: string
   updated_at: string

@@ -56,25 +56,28 @@ export default function DailyPlannerPage() {
   const dateStr = format(selectedDate, 'yyyy-MM-dd')
 
   const morningStart = settings.morning_start
+  const morningEnd = settings.morning_end
   const afternoonStart = settings.afternoon_start
+  const afternoonEnd = settings.afternoon_end
   const eveningStart = settings.evening_start
+  const eveningEnd = settings.evening_end
 
   const PERIODS: PeriodDef[] = useMemo(() => [
-    { key: 'morning' as Period, label: '上午', sub: `${morningStart} - ${afternoonStart}`, icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50/50', darkBg: 'dark:bg-amber-900/20' },
-    { key: 'afternoon' as Period, label: '下午', sub: `${afternoonStart} - ${eveningStart}`, icon: CloudSun, color: 'text-orange-500', bg: 'bg-orange-50/50', darkBg: 'dark:bg-orange-900/20' },
-    { key: 'evening' as Period, label: '晚上', sub: `${eveningStart} - 24:00`, icon: Moon, color: 'text-indigo-500', bg: 'bg-indigo-50/50', darkBg: 'dark:bg-indigo-900/20' },
-  ], [morningStart, afternoonStart, eveningStart])
+    { key: 'morning' as Period, label: '上午', sub: `${morningStart} - ${morningEnd}`, icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50/50', darkBg: 'dark:bg-amber-900/20' },
+    { key: 'afternoon' as Period, label: '下午', sub: `${afternoonStart} - ${afternoonEnd}`, icon: CloudSun, color: 'text-orange-500', bg: 'bg-orange-50/50', darkBg: 'dark:bg-orange-900/20' },
+    { key: 'evening' as Period, label: '晚上', sub: `${eveningStart} - ${eveningEnd}`, icon: Moon, color: 'text-indigo-500', bg: 'bg-indigo-50/50', darkBg: 'dark:bg-indigo-900/20' },
+  ], [morningStart, morningEnd, afternoonStart, afternoonEnd, eveningStart, eveningEnd])
 
   const timeBlocksByPeriod = useMemo(() => {
     const grouped: Record<Period, TimeBlock[]> = { morning: [], afternoon: [], evening: [] }
     timeBlocks.filter(b => b.date === dateStr).forEach(b => {
       const time = b.start_time
-      if (time >= morningStart && time < afternoonStart) grouped.morning.push(b)
-      else if (time >= afternoonStart && time < eveningStart) grouped.afternoon.push(b)
-      else grouped.evening.push(b)
+      if (time >= morningStart && time < morningEnd) grouped.morning.push(b)
+      else if (time >= afternoonStart && time < afternoonEnd) grouped.afternoon.push(b)
+      else if (time >= eveningStart && time <= eveningEnd) grouped.evening.push(b)
     })
     return grouped
-  }, [timeBlocks, dateStr, morningStart, afternoonStart, eveningStart])
+  }, [timeBlocks, dateStr, morningStart, morningEnd, afternoonStart, afternoonEnd, eveningStart, eveningEnd])
 
   const openModal = (period: Period, defaultTitle = '', defaultTaskId: string | null = null) => {
     setShowAddModal(period)
