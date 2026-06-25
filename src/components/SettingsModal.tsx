@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings'
 import { BaseModal } from './BaseModal'
 import CustomSelect from './CustomSelect'
+import CustomTimePicker from './CustomTimePicker'
 
 export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { user } = useAuth()
@@ -73,18 +74,18 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
             <h4 className="text-sm font-bold text-text-secondary border-b border-black/5 dark:border-white/5 pb-1">时段划分</h4>
             <div className="grid grid-cols-[auto_1fr_1fr] gap-2 items-center">
               <label className="text-sm font-medium text-text-primary mr-2">上午时间</label>
-              <input type="time" value={morning} onChange={e => setMorning(e.target.value)} className="px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" required />
-              <input type="time" value={morningEnd} onChange={e => setMorningEnd(e.target.value)} className="px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" required />
+              <CustomTimePicker value={morning} onChange={val => setMorning(val)} />
+              <CustomTimePicker value={morningEnd} onChange={val => setMorningEnd(val)} />
             </div>
             <div className="grid grid-cols-[auto_1fr_1fr] gap-2 items-center">
               <label className="text-sm font-medium text-text-primary mr-2">下午时间</label>
-              <input type="time" value={afternoon} onChange={e => setAfternoon(e.target.value)} className="px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" required />
-              <input type="time" value={afternoonEnd} onChange={e => setAfternoonEnd(e.target.value)} className="px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" required />
+              <CustomTimePicker value={afternoon} onChange={val => setAfternoon(val)} />
+              <CustomTimePicker value={afternoonEnd} onChange={val => setAfternoonEnd(val)} />
             </div>
             <div className="grid grid-cols-[auto_1fr_1fr] gap-2 items-center">
               <label className="text-sm font-medium text-text-primary mr-2">晚上时间</label>
-              <input type="time" value={evening} onChange={e => setEvening(e.target.value)} className="px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" required />
-              <input type="time" value={eveningEnd} onChange={e => setEveningEnd(e.target.value)} className="px-2 py-1.5 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" required />
+              <CustomTimePicker value={evening} onChange={val => setEvening(val)} />
+              <CustomTimePicker value={eveningEnd} onChange={val => setEveningEnd(val)} />
             </div>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">这些设置将决定每日规划页的时段划分边界。</p>
           </div>

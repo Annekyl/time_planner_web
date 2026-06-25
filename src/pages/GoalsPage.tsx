@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useGoals } from '../hooks/useGoals'
 import { Plus, Trash2, Edit3, Target, CheckCircle, XCircle } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import CustomDatePicker from '../components/CustomDatePicker'
 import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { motion, type Variants, AnimatePresence } from 'framer-motion'
 
@@ -22,8 +23,8 @@ export default function GoalsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean, id: string, title: string }>({ isOpen: false, id: '', title: '' })
-  const [form, setForm] = useState({ title: '', description: '', target_date: '', progress: 0, status: 'active' as 'active' | 'completed' | 'abandoned' })
-  const resetForm = () => { setForm({ title: '', description: '', target_date: '', progress: 0, status: 'active' }); setShowForm(false); setEditingId(null) }
+  const [form, setForm] = useState({ title: '', description: '', target_date: format(new Date(), 'yyyy-MM-dd'), progress: 0, status: 'active' as 'active' | 'completed' | 'abandoned' })
+  const resetForm = () => { setForm({ title: '', description: '', target_date: format(new Date(), 'yyyy-MM-dd'), progress: 0, status: 'active' }); setShowForm(false); setEditingId(null) }
   const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); const data = { ...form, target_date: form.target_date || null }; if (editingId) await updateGoal(editingId, data); else await addGoal(data); resetForm() }
   const handleEdit = (goal: typeof goals[0]) => { setForm({ title: goal.title, description: goal.description, target_date: goal.target_date || '', progress: goal.progress, status: goal.status }); setEditingId(goal.id); setShowForm(true) }
   const handleComplete = async (goal: typeof goals[0]) => { await updateGoal(goal.id, { status: goal.status === 'completed' ? 'active' : 'completed', progress: goal.status === 'completed' ? goal.progress : 100 }) }
@@ -50,7 +51,10 @@ export default function GoalsPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="目标标题" className={inputCls} required />
             <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="目标描述（可选）" className={`${inputCls} resize-none py-3`} rows={2} />
-            <div><label className="block text-xs font-medium text-text-secondary mb-1.5">目标日期</label><input type="date" value={form.target_date} onChange={e => setForm(p => ({ ...p, target_date: e.target.value }))} className="w-full px-4 py-2 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none" /></div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">目标日期</label>
+              <CustomDatePicker value={form.target_date} onChange={val => setForm(p => ({ ...p, target_date: val }))} placeholder="选择目标日期" />
+            </div>
             <div className="flex gap-2 pt-2">
               <button type="submit" className="px-5 py-2.5 bg-brand text-white rounded-xl hover:bg-brand-hover text-sm font-medium btn-press shadow-none transition-all duration-200">{editingId ? '保存更改' : '创建目标'}</button>
               <button type="button" onClick={resetForm} className="px-5 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-border-default text-text-secondary rounded-xl hover:bg-white dark:hover:bg-gray-600 text-sm font-medium btn-press transition-all duration-200">取消</button>

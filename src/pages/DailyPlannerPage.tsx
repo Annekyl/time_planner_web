@@ -10,6 +10,8 @@ import { zhCN } from 'date-fns/locale'
 import { motion, type Variants, AnimatePresence } from 'framer-motion'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import CustomSelect from '../components/CustomSelect'
+import CustomTimePicker from '../components/CustomTimePicker'
+import CustomColorPicker from '../components/CustomColorPicker'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -101,9 +103,12 @@ export default function DailyPlannerPage() {
       setFormColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)])
       setFormRecurrence({ type: 'none', interval: 1, unit: 'days' })
       
-      if (period === 'morning') { setFormTime(morningStart); setFormEndTime(String(parseInt(morningStart)+1).padStart(2, '0') + ':00') }
-      else if (period === 'afternoon') { setFormTime(afternoonStart); setFormEndTime(String(parseInt(afternoonStart)+1).padStart(2, '0') + ':00') }
-      else { setFormTime(eveningStart); setFormEndTime(String(parseInt(eveningStart)+1).padStart(2, '0') + ':00') }
+      const defaultDuration = Number(localStorage.getItem('default_block_duration') || 60)
+      const addMins = (t: string, m: number) => { const [h, min] = t.split(':').map(Number); const tot = h*60 + min + m; return `${String(Math.min(23, Math.floor(tot/60))).padStart(2, '0')}:${String(tot%60).padStart(2, '0')}` }
+      
+      if (period === 'morning') { setFormTime(morningStart); setFormEndTime(addMins(morningStart, defaultDuration)) }
+      else if (period === 'afternoon') { setFormTime(afternoonStart); setFormEndTime(addMins(afternoonStart, defaultDuration)) }
+      else { setFormTime(eveningStart); setFormEndTime(addMins(eveningStart, defaultDuration)) }
     }
   }
 
@@ -234,15 +239,15 @@ export default function DailyPlannerPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">开始时间</label>
-                    <input type="time" value={formTime} onChange={e => setFormTime(e.target.value)} className="w-full px-2 py-2 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" required />
+                    <CustomTimePicker value={formTime} onChange={val => setFormTime(val)} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">结束时间</label>
-                    <input type="time" value={formEndTime} onChange={e => setFormEndTime(e.target.value)} className="w-full px-2 py-2 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" required />
+                    <CustomTimePicker value={formEndTime} onChange={val => setFormEndTime(val)} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">标签颜色</label>
-                    <input type="color" value={formColor} onChange={e => setFormColor(e.target.value)} className="w-full h-9 p-0.5 border border-border-default bg-transparent rounded-lg cursor-pointer" required />
+                    <CustomColorPicker value={formColor} onChange={val => setFormColor(val)} className="w-full h-9" />
                   </div>
                 </div>
                 

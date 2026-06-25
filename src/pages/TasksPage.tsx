@@ -4,6 +4,8 @@ import { useTasks } from '../hooks/useTasks'
 import { Plus, Trash2, Edit3, Check, CheckSquare } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import CustomSelect from '../components/CustomSelect'
+import CustomDatePicker from '../components/CustomDatePicker'
+import CustomColorPicker from '../components/CustomColorPicker'
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns'
 import { motion, type Variants, AnimatePresence } from 'framer-motion'
 
@@ -27,7 +29,7 @@ export default function TasksPage() {
   const [showForm, setShowForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ title: '', description: '', priority: 2 as 1 | 2 | 3 | 4, status: 'pending' as 'pending' | 'in_progress' | 'completed' | 'cancelled', due_date: '', category_id: '' })
+  const [form, setForm] = useState({ title: '', description: '', priority: 2 as 1 | 2 | 3 | 4, status: 'pending' as 'pending' | 'in_progress' | 'completed' | 'cancelled', due_date: format(new Date(), 'yyyy-MM-dd'), category_id: '' })
   const [formSubtasks, setFormSubtasks] = useState<{completed: boolean, text: string}[]>([])
   const [formRecurrence, setFormRecurrence] = useState<{ type: 'none' | 'daily' | 'weekly' | 'monthly' | 'custom', interval: number, unit: 'days' | 'weeks' | 'months' }>({ type: 'none', interval: 1, unit: 'days' })
   const [catForm, setCatForm] = useState({ id: '', name: '', color: PRESET_COLORS[0] })
@@ -50,7 +52,7 @@ export default function TasksPage() {
     return desc ? (stLines.length > 0 ? `${desc}\n\n${stLines.join('\n')}` : desc) : stLines.join('\n')
   }
 
-  const resetForm = () => { setForm({ title: '', description: '', priority: 2, status: 'pending', due_date: '', category_id: '' }); setFormSubtasks([]); setFormRecurrence({ type: 'none', interval: 1, unit: 'days' }); setShowForm(false); setEditingId(null) }
+  const resetForm = () => { setForm({ title: '', description: '', priority: 2, status: 'pending', due_date: format(new Date(), 'yyyy-MM-dd'), category_id: '' }); setFormSubtasks([]); setFormRecurrence({ type: 'none', interval: 1, unit: 'days' }); setShowForm(false); setEditingId(null) }
   const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); const finalDesc = buildDescription(form.description, formSubtasks); const recurrence_rule = formRecurrence.type === 'none' ? null : { type: formRecurrence.type, interval: formRecurrence.type === 'custom' ? formRecurrence.interval : undefined, unit: formRecurrence.type === 'custom' ? formRecurrence.unit : undefined }; if (editingId) await updateTask(editingId, { ...form, description: finalDesc, due_date: form.due_date || null, recurrence_rule }); else await addTask({ ...form, description: finalDesc, due_date: form.due_date || null, completed_at: null, recurrence_rule }); resetForm() }
   const handleEdit = (task: typeof tasks[0]) => { const parsed = parseDescription(task.description || ''); setForm({ title: task.title, description: parsed.description, priority: task.priority, status: task.status, due_date: task.due_date || '', category_id: task.category_id || '' }); setFormSubtasks(parsed.subtasks); const r = task.recurrence_rule; setFormRecurrence({ type: r ? r.type : 'none', interval: r?.interval || 1, unit: r?.unit || 'days' }); setEditingId(task.id); setShowForm(true) }
   const handleToggleComplete = async (task: typeof tasks[0]) => { 
@@ -110,8 +112,7 @@ export default function TasksPage() {
 
   const priorityLabel: Record<number, string> = { 1: '低', 2: '中', 3: '高', 4: '紧急' }
   const priorityColor: Record<number, string> = { 1: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400', 2: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', 3: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', 4: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
-  const inputCls = "w-full px-4 py-2 border border-border-default bg-bg-secondary text-text-primary rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm transition-all duration-200"
-  const selectCls = "w-full px-3 py-2 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none"
+  const inputCls = "w-full px-4 py-2 border border-border-default bg-bg-secondary text-text-primary rounded-xl transition-all duration-200 focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm font-medium"
 
   return (
     <motion.div 
@@ -132,7 +133,7 @@ export default function TasksPage() {
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="glass rounded-2xl p-4 md:p-5 mb-4 overflow-hidden shadow-sm">
           <h3 className="font-bold text-text-primary mb-3 text-sm">{catForm.id ? '编辑分类' : '添加分类'}</h3>
           <form onSubmit={handleAddCategory} className="flex items-center gap-2 md:gap-3">
-            <input type="color" value={catForm.color} onChange={e => setCatForm(p => ({ ...p, color: e.target.value }))} className="w-10 h-10 rounded-xl cursor-pointer shrink-0 border-0 p-0" />
+            <CustomColorPicker variant="square" value={catForm.color} onChange={val => setCatForm(p => ({ ...p, color: val }))} />
             <input value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} placeholder="分类名称" className="flex-1 min-w-0 px-4 py-2.5 border border-border-default bg-bg-secondary text-text-primary rounded-xl text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all duration-200" required />
             <button type="submit" className="px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-medium hover:bg-brand-hover shrink-0 shadow-none btn-press">{catForm.id ? '保存' : '添加'}</button>
           </form>
@@ -199,7 +200,10 @@ export default function TasksPage() {
                 <label className="block text-xs font-medium text-text-secondary mb-1.5">状态</label>
                 <CustomSelect value={form.status} onChange={val => setForm(p => ({ ...p, status: val as any }))} options={[{ label: '待办', value: 'pending' }, { label: '进行中', value: 'in_progress' }, { label: '已完成', value: 'completed' }]} />
               </div>
-              <div><label className="block text-xs font-medium text-text-secondary mb-1.5">截止日期</label><input type="date" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))} className={selectCls} /></div>
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">截止日期</label>
+                <CustomDatePicker value={form.due_date} onChange={val => setForm(p => ({ ...p, due_date: val }))} placeholder="选择截止日期" />
+              </div>
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1.5">分类</label>
                 <CustomSelect value={form.category_id} onChange={val => setForm(p => ({ ...p, category_id: val as string }))} options={[{ label: '无分类', value: '' }, ...categories.map(c => ({ label: c.name, value: c.id }))]} />
