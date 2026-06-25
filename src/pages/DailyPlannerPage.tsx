@@ -4,7 +4,7 @@ import { useSettings } from '../hooks/useSettings'
 import { useTasks } from '../hooks/useTasks'
 import { useTimeBlocks } from '../hooks/useTimeBlocks'
 import type { TimeBlock } from '../types'
-import { Sun, CloudSun, Moon, Plus, Trash2, Check, ChevronLeft, ChevronRight, CalendarDays, X } from 'lucide-react'
+import { Sun, CloudSun, Moon, Plus, Trash2, Check, ChevronLeft, ChevronRight, CalendarDays, X, Edit3 } from 'lucide-react'
 import { format, addDays, subDays, isToday } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { motion, type Variants, AnimatePresence } from 'framer-motion'
@@ -40,12 +40,13 @@ export default function DailyPlannerPage() {
   const dateStr = format(selectedDate, 'yyyy-MM-dd')
 
   const { tasks } = useTasks(user?.id, { incompleteOnly: true })
-  const { timeBlocks, addTimeBlock, toggleTimeBlock, deleteTimeBlock } = useTimeBlocks(user?.id, { startDate: dateStr, endDate: dateStr })
+  const { timeBlocks, addTimeBlock, toggleTimeBlock, deleteTimeBlock, updateTimeBlock } = useTimeBlocks(user?.id, { startDate: dateStr, endDate: dateStr })
   const [showTaskPicker, setShowTaskPicker] = useState<{ period: Period } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean, id: string, title: string }>({ isOpen: false, id: '', title: '' })
   
   // Modal State
   const [showAddModal, setShowAddModal] = useState<Period | null>(null)
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [formTitle, setFormTitle] = useState('')
   const [formTime, setFormTime] = useState('09:00')
   const [formEndTime, setFormEndTime] = useState('10:00')
@@ -82,34 +83,59 @@ export default function DailyPlannerPage() {
     return grouped
   }, [timeBlocks, dateStr, morningStart, morningEnd, afternoonStart, afternoonEnd, eveningStart, eveningEnd])
 
-  const openModal = (period: Period, defaultTitle = '', defaultTaskId: string | null = null) => {
+  const openModal = (period: Period, defaultTitle = '', defaultTaskId: string | null = null, editBlock?: TimeBlock) => {
     setShowAddModal(period)
-    setFormTitle(defaultTitle)
-    setFormTaskId(defaultTaskId)
-    setFormColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)])
-    setFormRecurrence({ type: 'none', interval: 1, unit: 'days' })
-    
-    if (period === 'morning') { setFormTime(morningStart); setFormEndTime(String(parseInt(morningStart)+1).padStart(2, '0') + ':00') }
-    else if (period === 'afternoon') { setFormTime(afternoonStart); setFormEndTime(String(parseInt(afternoonStart)+1).padStart(2, '0') + ':00') }
-    else { setFormTime(eveningStart); setFormEndTime(String(parseInt(eveningStart)+1).padStart(2, '0') + ':00') }
+    if (editBlock) {
+      setEditingBlockId(editBlock.id)
+      setFormTitle(editBlock.title)
+      setFormTime(editBlock.start_time)
+      setFormEndTime(editBlock.end_time)
+      setFormColor(editBlock.color || '#6366f1')
+      setFormTaskId(editBlock.task_id || null)
+      setFormRecurrence(editBlock.recurrence_rule ? { type: editBlock.recurrence_rule.type, interval: editBlock.recurrence_rule.interval || 1, unit: editBlock.recurrence_rule.unit || 'days' } : { type: 'none', interval: 1, unit: 'days' })
+    } else {
+      setEditingBlockId(null)
+      setFormTitle(defaultTitle)
+      setFormTaskId(defaultTaskId)
+      setFormColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)])
+      setFormRecurrence({ type: 'none', interval: 1, unit: 'days' })
+      
+      if (period === 'morning') { setFormTime(morningStart); setFormEndTime(String(parseInt(morningStart)+1).padStart(2, '0') + ':00') }
+      else if (period === 'afternoon') { setFormTime(afternoonStart); setFormEndTime(String(parseInt(afternoonStart)+1).padStart(2, '0') + ':00') }
+      else { setFormTime(eveningStart); setFormEndTime(String(parseInt(eveningStart)+1).padStart(2, '0') + ':00') }
+    }
   }
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formTitle.trim()) return
     const recurrence_rule = formRecurrence.type === 'none' ? null : { type: formRecurrence.type, interval: formRecurrence.type === 'custom' ? formRecurrence.interval : undefined, unit: formRecurrence.type === 'custom' ? formRecurrence.unit : undefined }
-    await addTimeBlock({
-      title: formTitle,
-      date: dateStr,
-      start_time: formTime,
-      end_time: formEndTime,
-      color: formColor,
-      category_id: null,
-      task_id: formTaskId,
-      completed: false,
-      recurrence_rule
-    })
+    
+    if (editingBlockId) {
+      await updateTimeBlock(editingBlockId, {
+        title: formTitle,
+        start_time: formTime,
+        end_time: formEndTime,
+        color: formColor,
+        task_id: formTaskId || undefined,
+        recurrence_rule
+      })
+    } else {
+      await addTimeBlock({
+        title: formTitle,
+        date: dateStr,
+        start_time: formTime,
+        end_time: formEndTime,
+        color: formColor,
+        category_id: null,
+        task_id: formTaskId,
+        completed: false,
+        recurrence_rule
+      })
+    }
+    
     setShowAddModal(null)
+    setEditingBlockId(null)
     setFormTitle('')
     setFormTaskId(null)
   }
@@ -181,6 +207,7 @@ export default function DailyPlannerPage() {
             period={period} 
             timeBlocks={timeBlocksByPeriod[period.key]} 
             onAdd={() => openModal(period.key)} 
+            onEdit={(block) => openModal(period.key, '', null, block)}
             onToggle={toggleTimeBlock} 
             onDelete={(id, title) => setDeleteConfirm({ isOpen: true, id, title })} 
             onAddFromTask={() => setShowTaskPicker({ period: period.key })} 
@@ -194,8 +221,8 @@ export default function DailyPlannerPage() {
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-4 pt-20 md:pt-4 bg-black/20 backdrop-blur-sm" onClick={() => setShowAddModal(null)}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="glass w-full max-w-sm p-5 md:p-6 relative max-h-[85dvh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => setShowAddModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"><X size={20} /></button>
-              <h3 className="text-lg font-bold font-serif text-text-primary mb-4">添加时间块规划</h3>
+              <button onClick={() => { setShowAddModal(null); setEditingBlockId(null); }} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"><X size={20} /></button>
+              <h3 className="text-lg font-bold font-serif text-text-primary mb-4">{editingBlockId ? '编辑时间块规划' : '添加时间块规划'}</h3>
               
               <form onSubmit={handleAddSubmit} className="space-y-4">
                 <div>
@@ -242,7 +269,9 @@ export default function DailyPlannerPage() {
                   )}
                 </div>
                 
-                <button type="submit" className="w-full py-2.5 rounded-lg text-bg-primary font-medium btn-press bg-text-primary dark:bg-bg-primary">保存规划</button>
+                <button type="submit" className="w-full py-2.5 rounded-lg text-bg-primary font-medium btn-press bg-text-primary dark:bg-bg-primary">
+                  {editingBlockId ? '保存修改' : '保存规划'}
+                </button>
               </form>
             </motion.div>
           </div>
@@ -263,8 +292,8 @@ export default function DailyPlannerPage() {
   )
 }
 
-function PeriodSection({ period, timeBlocks, onAdd, onToggle, onDelete, onAddFromTask }: {
-  period: PeriodDef; timeBlocks: TimeBlock[]; onAdd: () => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string, title: string) => void; onAddFromTask: () => void
+function PeriodSection({ period, timeBlocks, onAdd, onEdit, onToggle, onDelete, onAddFromTask }: {
+  period: PeriodDef; timeBlocks: TimeBlock[]; onAdd: () => void; onEdit: (block: TimeBlock) => void; onToggle: (id: string, completed: boolean) => void; onDelete: (id: string, title: string) => void; onAddFromTask: () => void
 }) {
   const Icon = period.icon
   const completedCount = timeBlocks.filter(i => i.completed).length
@@ -310,7 +339,10 @@ function PeriodSection({ period, timeBlocks, onAdd, onToggle, onDelete, onAddFro
 
                 {block.task_id && <span className="text-[10px] font-bold text-indigo-500 dark:text-brand bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md shrink-0">任务</span>}
                 
-                <button onClick={() => onDelete(block.id, block.title)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all duration-200 shrink-0 opacity-0 group-hover:opacity-100 btn-press"><Trash2 size={14} /></button>
+                <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => onEdit(block)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-brand dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-all duration-200 btn-press"><Edit3 size={14} /></button>
+                  <button onClick={() => onDelete(block.id, block.title)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all duration-200 btn-press"><Trash2 size={14} /></button>
+                </div>
               </div>
             ))}
           </div>
