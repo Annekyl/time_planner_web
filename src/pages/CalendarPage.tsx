@@ -177,9 +177,9 @@ function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsFo
       <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700/50 rounded-xl overflow-hidden">
         {['一', '二', '三', '四', '五', '六', '日'].map(d => <div key={d} className="text-center text-[10px] md:text-xs font-bold text-gray-500 dark:text-gray-400 py-2 bg-white dark:bg-[#1A1918]">{d}</div>)}
         {days.map(day => { const inMonth = isSameMonth(day, currentMonth); const selected = isSameDay(day, selectedDate); const today = isToday(day); const events = getEventsForDay(day); return (
-          <div key={day.toISOString()} onClick={() => onSelectDate(day)} onDoubleClick={(e) => { e.stopPropagation(); onAddEvent('task', day); }} className={`relative p-1 md:p-2 min-h-[80px] md:min-h-[100px] text-left transition-all duration-200 cursor-pointer group bg-white dark:bg-[#1A1918] ${!inMonth ? 'text-gray-300 dark:text-gray-600 bg-gray-50/50 dark:bg-[#22201F]' : selected ? 'ring-2 ring-inset ring-brand bg-indigo-50/30 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-[#2A2927]'}`}>
+          <div key={day.toISOString()} onClick={() => onSelectDate(day)} onDoubleClick={(e) => { e.stopPropagation(); onAddEvent('task', day); }} className={`relative p-1 md:p-2 min-h-[80px] md:min-h-[100px] text-left transition-all duration-200 cursor-pointer group bg-white dark:bg-[#1A1918] ${!inMonth ? 'bg-gray-50/50 dark:bg-[#22201F] opacity-40 grayscale-[50%]' : selected ? 'ring-2 ring-inset ring-brand bg-indigo-50/30 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-[#2A2927]'}`}>
             <div className="flex justify-between items-start">
-              <span className={`text-xs md:text-sm font-bold ${today ? 'bg-brand text-white w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center' : 'text-text-primary'}`}>{format(day, 'd')}</span>
+              <span className={`text-xs md:text-sm font-bold ${today ? 'bg-brand text-white w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center' : !inMonth ? 'text-gray-400 dark:text-gray-500' : 'text-text-primary'}`}>{format(day, 'd')}</span>
               <button onClick={(e) => { e.stopPropagation(); onAddEvent('task', day) }} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 dark:text-gray-300 hidden md:block"><Plus size={14} /></button>
             </div>
             <div className="mt-1 space-y-0.5 hidden md:block">{events.blocks.slice(0, 2).map(b => <div key={b.id} className={`text-[10px] rounded px-1 truncate ${b.completed ? 'opacity-60 line-through' : ''} text-white font-medium`} style={{ backgroundColor: b.color }}>{b.title}</div>)}{events.tasks.length > 0 && <div className="text-[10px] border border-border-default text-text-secondary font-medium rounded px-1 truncate bg-bg-tertiary/50">{events.tasks.length} 个任务</div>}</div>
@@ -196,7 +196,7 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
   return (
     <div className="glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
       <div className="overflow-y-auto max-h-[600px] relative">
-        <div className="sticky top-0 z-20 grid grid-cols-8 border-b border-gray-200 dark:border-gray-700/50 bg-white/95 dark:bg-[#1A1918]/95 backdrop-blur-md shadow-sm">
+        <div className="sticky top-0 z-20 grid grid-cols-[3rem_repeat(7,1fr)] md:grid-cols-[4rem_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700/50 bg-white/95 dark:bg-[#1A1918]/95 backdrop-blur-md shadow-sm">
           <div className="w-12 md:w-16" />
           {days.map(day => { const selected = isSameDay(day, selectedDate); const today = isToday(day); return (
             <div key={day.toISOString()} onClick={() => onSelectDate(day)} onDoubleClick={(e) => { e.stopPropagation(); onAddEvent('block', day); }} className={`group relative py-2 md:py-3 text-center border-l border-gray-200 dark:border-gray-700/50 transition-all duration-200 cursor-pointer ${selected ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-[#2A2927]'}`}>
@@ -206,7 +206,7 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
             </div>
           )})}
         </div>
-        <div className="grid grid-cols-8 relative bg-white dark:bg-[#1A1918]">
+        <div className="grid grid-cols-[3rem_repeat(7,1fr)] md:grid-cols-[4rem_repeat(7,1fr)] relative bg-white dark:bg-[#1A1918]">
           <div className="w-12 md:w-16">{displayHours.map(hour => <div key={hour} className="border-b border-gray-200 dark:border-gray-700/50 flex items-start justify-end pr-2 pt-0.5" style={{ height: `${hourHeight}px` }}><span className="text-[9px] md:text-[10px] font-medium text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span></div>)}</div>
           {days.map(day => { const events = getEventsForDay(day); return (
             <div key={day.toISOString()} className="relative border-l border-gray-200 dark:border-gray-700/50 cursor-crosshair" onDoubleClick={(e) => { e.stopPropagation(); const y = e.clientY - e.currentTarget.getBoundingClientRect().top; let h = Math.floor(y / hourHeight) + startHour; h = Math.max(startHour, Math.min(23, h)); onAddEvent('block', day, `${String(h).padStart(2, '0')}:00`); }}>
