@@ -1,18 +1,34 @@
 import { Outlet, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import { motion, AnimatePresence } from 'framer-motion'
 import PomodoroWidget from './PomodoroWidget'
 import CommandPalette from './CommandPalette'
+import UserGuideModal from './UserGuideModal'
 import { useRealtimeSync } from '../hooks/useRealtimeSync'
 
 export default function Layout() {
   const location = useLocation()
   useRealtimeSync()
 
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [location.pathname])
+
+  useEffect(() => {
+    const hasSeen = localStorage.getItem('has_seen_onboarding')
+    if (!hasSeen) {
+      // 首次进入展示引导
+      setShowOnboarding(true)
+    }
+  }, [])
+
+  const closeOnboarding = () => {
+    setShowOnboarding(false)
+    localStorage.setItem('has_seen_onboarding', 'true')
+  }
 
   return (
     <div className="flex min-h-screen transition-colors duration-300 bg-bg-page">
@@ -33,6 +49,7 @@ export default function Layout() {
       </div>
       <PomodoroWidget />
       <CommandPalette />
+      <UserGuideModal isOpen={showOnboarding} onClose={closeOnboarding} />
     </div>
   )
 }

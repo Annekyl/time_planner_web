@@ -15,9 +15,13 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
   const [evening, setEvening] = useState('18:00')
   const [eveningEnd, setEveningEnd] = useState('23:59')
   const [hourHeight, setHourHeight] = useState(48)
+  const [defaultDuration, setDefaultDuration] = useState(60)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
+    const savedDuration = localStorage.getItem('default_block_duration')
+    if (savedDuration) setDefaultDuration(Number(savedDuration))
+
     if (settings) {
       setMorning(settings.morning_start)
       setMorningEnd(settings.morning_end)
@@ -32,6 +36,7 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
+    localStorage.setItem('default_block_duration', defaultDuration.toString())
     await updateSettings({
       morning_start: morning,
       morning_end: morningEnd,
@@ -92,6 +97,22 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
                 <option value={48}>标准 (48px/小时)</option>
                 <option value={64}>宽松 (64px/小时)</option>
               </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4 items-center mt-3">
+              <label className="text-sm font-medium text-text-primary">默认时间块时长</label>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="number" 
+                  min={5} 
+                  max={1440} 
+                  step={5}
+                  value={defaultDuration} 
+                  onChange={e => setDefaultDuration(Number(e.target.value))} 
+                  className="w-full px-3 py-2 border border-border-default bg-transparent text-text-primary rounded-lg focus:border-brand outline-none text-sm" 
+                  required 
+                />
+                <span className="text-sm text-text-secondary whitespace-nowrap">分钟</span>
+              </div>
             </div>
           </div>
 

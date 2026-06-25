@@ -41,7 +41,7 @@ export function BaseModal({
     <AnimatePresence>
       {isOpen && (
         <div 
-          className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm`}
+          className={`fixed inset-0 ${zIndex} flex items-start md:items-center justify-center p-4 pt-16 md:pt-4 bg-black/40 backdrop-blur-sm`}
           onClick={closeOnClickOutside ? onClose : undefined}
         >
           <motion.div
@@ -50,7 +50,7 @@ export function BaseModal({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className={`w-full ${maxWidth} bg-bg-primary rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-border-default flex flex-col max-h-[90vh]`}
+            className={`w-full ${maxWidth} bg-bg-primary rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-border-default flex flex-col max-h-[85dvh]`}
           >
             {!hideHeader && (
               <div className="p-4 md:p-6 border-b border-border-subtle flex items-center justify-between shrink-0">

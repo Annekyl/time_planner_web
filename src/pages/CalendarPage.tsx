@@ -25,7 +25,7 @@ export default function CalendarPage() {
   }, [selectedDate])
 
   const { tasks, addTask } = useTasks(user?.id, dateRange)
-  const { timeBlocks, addTimeBlock } = useTimeBlocks(user?.id, dateRange)
+  const { timeBlocks, addTimeBlock, updateTimeBlock } = useTimeBlocks(user?.id, dateRange)
   
   const [showAddModal, setShowAddModal] = useState<false | 'task' | 'block'>(false)
   const [formTitle, setFormTitle] = useState('')
@@ -36,6 +36,20 @@ export default function CalendarPage() {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const minSwipeDistance = 50
+
+  const defaultDuration = Number(localStorage.getItem('default_block_duration') || 60)
+
+  const mStart = parseInt(settings.morning_start.split(':')[0], 10)
+  const mEnd = parseInt(settings.morning_end.split(':')[0], 10) + (parseInt(settings.morning_end.split(':')[1], 10) > 0 ? 1 : 0)
+  const aStart = parseInt(settings.afternoon_start.split(':')[0], 10)
+  const aEnd = parseInt(settings.afternoon_end.split(':')[0], 10) + (parseInt(settings.afternoon_end.split(':')[1], 10) > 0 ? 1 : 0)
+  const eStart = parseInt(settings.evening_start.split(':')[0], 10)
+  const eEnd = parseInt(settings.evening_end.split(':')[0], 10) + (parseInt(settings.evening_end.split(':')[1], 10) > 0 ? 1 : 0)
+
+  const displayHours: number[] = []
+  for (let h = mStart; h < mEnd; h++) { if (!displayHours.includes(h)) displayHours.push(h) }
+  for (let h = aStart; h < aEnd; h++) { if (!displayHours.includes(h)) displayHours.push(h) }
+  for (let h = eStart; h < Math.min(24, eEnd); h++) { if (!displayHours.includes(h)) displayHours.push(h) }
 
   const monthDays = useMemo(() => { const ms = startOfMonth(selectedDate); const me = endOfMonth(selectedDate); return eachDayOfInterval({ start: startOfWeek(ms), end: endOfWeek(me) }) }, [selectedDate])
   const weekDays = useMemo(() => { const ws = startOfWeek(selectedDate); return eachDayOfInterval({ start: ws, end: addDays(ws, 6) }) }, [selectedDate])
@@ -59,6 +73,43 @@ export default function CalendarPage() {
     setFormEndTime('10:00')
   }
 
+  const handleDropEvent = async (payload: any, targetDay: Date, targetHour: number) => {
+    if (payload.type === 'block') {
+      const [sH, sM] = payload.start.split(':').map(Number)
+      const [eH, eM] = payload.end.split(':').map(Number)
+      const durationMins = (eH * 60 + eM) - (sH * 60 + sM)
+      
+      const newEndMins = (targetHour * 60) + durationMins
+      const newEndHour = Math.min(23, Math.floor(newEndMins / 60))
+      const newEndMinRemainder = newEndMins % 60
+
+      await updateTimeBlock(payload.id, {
+        date: format(targetDay, 'yyyy-MM-dd'),
+        start_time: `${String(targetHour).padStart(2, '0')}:00`,
+        end_time: `${String(newEndHour).padStart(2, '0')}:${String(newEndMinRemainder).padStart(2, '0')}`
+      })
+    } else if (payload.type === 'task') {
+      const task = tasks.find(t => t.id === payload.id)
+      if (!task) return
+      const randomColor = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]
+      
+      const totalMins = targetHour * 60 + defaultDuration
+      const endH = Math.min(23, Math.floor(totalMins / 60))
+      const endM = totalMins % 60
+
+      await addTimeBlock({
+        title: task.title,
+        date: format(targetDay, 'yyyy-MM-dd'),
+        start_time: `${String(targetHour).padStart(2, '0')}:00`,
+        end_time: `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`,
+        color: randomColor,
+        category_id: task.category_id,
+        task_id: task.id,
+        completed: false
+      })
+    }
+  }
+
   const openModal = (type: 'task' | 'block', date?: Date, defaultTime?: string) => {
     if (date) setSelectedDate(date)
     setShowAddModal(type)
@@ -70,9 +121,11 @@ export default function CalendarPage() {
 
     if (defaultTime) {
       setFormTime(defaultTime)
-      const [h, m] = defaultTime.split(':')
-      const endH = String(Math.min(23, Number(h) + 1)).padStart(2, '0')
-      setFormEndTime(`${endH}:${m}`)
+      const [h, m] = defaultTime.split(':').map(Number)
+      const totalMins = h * 60 + m + defaultDuration
+      const endH = Math.min(23, Math.floor(totalMins / 60))
+      const endM = totalMins % 60
+      setFormEndTime(`${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`)
     } else {
       setFormTime('09:00')
       setFormEndTime('10:00')
@@ -128,8 +181,8 @@ export default function CalendarPage() {
       </div>
 
       {viewMode === 'month' && <MonthView days={monthDays} currentMonth={selectedDate} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} />}
-      {viewMode === 'week' && <WeekView days={weekDays} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} startHour={parseInt(settings.morning_start.split(':')[0], 10)} hourHeight={settings.hour_height || 48} />}
-      {viewMode === 'day' && <DayView date={selectedDate} events={getEventsForDay(selectedDate)} onAddEvent={openModal} startHour={parseInt(settings.morning_start.split(':')[0], 10)} hourHeight={settings.hour_height || 48} />}
+      {viewMode === 'week' && <WeekView days={weekDays} selectedDate={selectedDate} onSelectDate={setSelectedDate} getEventsForDay={getEventsForDay} onAddEvent={openModal} onDropEvent={handleDropEvent} displayHours={displayHours} startHour={mStart} afternoonStartHour={aStart} eveningStartHour={eStart} hourHeight={settings.hour_height || 48} />}
+      {viewMode === 'day' && <DayView date={selectedDate} events={getEventsForDay(selectedDate)} onAddEvent={openModal} onDropEvent={handleDropEvent} displayHours={displayHours} startHour={mStart} afternoonStartHour={aStart} eveningStartHour={eStart} hourHeight={settings.hour_height || 48} />}
 
       <AnimatePresence>
         {showAddModal && (
@@ -191,8 +244,7 @@ function MonthView({ days, currentMonth, selectedDate, onSelectDate, getEventsFo
   )
 }
 
-function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent, startHour, hourHeight }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; startHour: number; hourHeight: number }) {
-  const displayHours = Array.from({ length: 24 - startHour }, (_, i) => i + startHour)
+function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEvent, onDropEvent, displayHours, startHour, afternoonStartHour, eveningStartHour, hourHeight }: { days: Date[]; selectedDate: Date; onSelectDate: (d: Date) => void; getEventsForDay: (d: Date) => { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onDropEvent: (payload: any, d: Date, h: number) => void; displayHours: number[]; startHour: number; afternoonStartHour: number; eveningStartHour: number; hourHeight: number }) {
   const [activeCell, setActiveCell] = useState<{ day: string, hour: number } | null>(null)
   
   return (
@@ -209,16 +261,41 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
           )})}
         </div>
         <div className="grid grid-cols-[3rem_repeat(7,1fr)] md:grid-cols-[4rem_repeat(7,1fr)] relative bg-white dark:bg-[#1A1918]">
-          <div className="w-12 md:w-16">{displayHours.map(hour => <div key={hour} className="border-b border-gray-200 dark:border-gray-700/50 flex items-start justify-end pr-2 pt-0.5" style={{ height: `${hourHeight}px` }}><span className="text-[9px] md:text-[10px] font-medium text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span></div>)}</div>
+          <div className="w-12 md:w-16">
+            {displayHours.map(hour => {
+              const isMorningStart = hour === startHour;
+              const isAfternoonStart = hour === afternoonStartHour;
+              const isEveningStart = hour === eveningStartHour;
+              return (
+                <div key={hour} className={`border-b flex items-start justify-end pr-2 pt-0.5 ${isAfternoonStart || isEveningStart ? 'border-t-2 border-t-brand/20 border-b-gray-200 dark:border-b-gray-700/50' : 'border-gray-200 dark:border-gray-700/50'}`} style={{ height: `${hourHeight}px` }}>
+                  <div className="flex flex-col items-end gap-0.5">
+                    {(isMorningStart || isAfternoonStart || isEveningStart) && (
+                      <span className="text-[8px] md:text-[9px] font-bold text-brand bg-brand/10 px-1 rounded whitespace-nowrap hidden md:inline-block">
+                        {isMorningStart ? '上午' : isAfternoonStart ? '下午' : '晚上'}
+                      </span>
+                    )}
+                    <span className="text-[9px] md:text-[10px] font-medium text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
           {days.map(day => { const events = getEventsForDay(day); return (
             <div key={day.toISOString()} className="relative border-l border-gray-200 dark:border-gray-700/50 cursor-pointer">
               {displayHours.map(hour => {
                 const isActive = activeCell?.day === day.toISOString() && activeCell?.hour === hour;
+                const isSectionStart = hour === afternoonStartHour || hour === eveningStartHour;
                 return (
                   <div 
                     key={hour} 
-                    className={`border-b border-gray-200 dark:border-gray-700/50 relative transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
+                    className={`border-b relative transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'} ${isSectionStart ? 'border-t-2 border-t-brand/20 border-b-gray-200 dark:border-b-gray-700/50' : 'border-gray-200 dark:border-gray-700/50'}`} 
                     style={{ height: `${hourHeight}px` }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const data = e.dataTransfer.getData('application/json');
+                      if (data) onDropEvent(JSON.parse(data), day, hour);
+                    }}
                     onClick={() => {
                       if (isActive) {
                         onAddEvent('block', day, `${String(hour).padStart(2, '0')}:00`);
@@ -236,7 +313,7 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
                   </div>
                 )
               })}
-              {events.blocks.map(block => { const [sh, sm] = block.start_time.split(':').map(Number); if (sh < startHour || sh > 23) return null; const top = ((sh - startHour) * hourHeight) + ((sm / 60) * hourHeight); const [eh, em] = block.end_time.split(':').map(Number); const height = (((eh * 60 + em) - (sh * 60 + sm)) / 60) * hourHeight; return <div key={block.id} className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in shadow-sm ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ backgroundColor: block.color, top: `${top}px`, height: `${Math.max(height, 20)}px`, pointerEvents: 'none' }}><p className="font-medium truncate">{block.title}</p></div> })}
+              {events.blocks.map(block => { const sh = parseInt(block.start_time.split(':')[0], 10); const sm = parseInt(block.start_time.split(':')[1], 10); const eh = parseInt(block.end_time.split(':')[0], 10); const em = parseInt(block.end_time.split(':')[1], 10); const hIndex = displayHours.indexOf(sh); if (hIndex === -1) return null; const top = (hIndex * hourHeight) + ((sm / 60) * hourHeight); const durationMins = (eh * 60 + em) - (sh * 60 + sm); const height = (durationMins / 60) * hourHeight; return <div key={block.id} draggable onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('application/json', JSON.stringify({ type: 'block', id: block.id, start: block.start_time, end: block.end_time })) }} className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] md:text-[10px] text-white overflow-hidden fade-in shadow-sm cursor-grab active:cursor-grabbing hover:z-10 ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ backgroundColor: block.color, top: `${top}px`, height: `${Math.max(height, 20)}px` }}><p className="font-medium truncate">{block.title}</p></div> })}
               {events.tasks.length > 0 && <div className="absolute bottom-1 left-0.5 right-0.5 flex flex-col gap-0.5 pointer-events-none">{events.tasks.slice(0, 2).map(t => <div key={t.id} className="bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded px-1 py-0.5 text-[9px] truncate">{t.title}</div>)}{events.tasks.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500 px-1 font-medium">+{events.tasks.length - 2}</div>}</div>}
             </div>
           )})}
@@ -246,9 +323,8 @@ function WeekView({ days, selectedDate, onSelectDate, getEventsForDay, onAddEven
   )
 }
 
-function DayView({ date, events, onAddEvent, startHour, hourHeight }: { date: Date; events: { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; startHour: number; hourHeight: number }) {
-  const displayHours = Array.from({ length: 24 - startHour }, (_, i) => i + startHour)
-  const getBlockStyle = (block: any) => { const [sh, sm] = block.start_time.split(':').map(Number); const [eh, em] = block.end_time.split(':').map(Number); return { top: `${((sh - startHour) * hourHeight) + ((sm / 60) * hourHeight)}px`, height: `${Math.max((((eh * 60 + em) - (sh * 60 + sm)) / 60) * hourHeight, 24)}px` } }
+function DayView({ date, events, onAddEvent, onDropEvent, displayHours, startHour, afternoonStartHour, eveningStartHour, hourHeight }: { date: Date; events: { tasks: any[]; blocks: any[] }; onAddEvent: (t: 'task'|'block', d: Date, time?: string) => void; onDropEvent: (payload: any, d: Date, h: number) => void; displayHours: number[]; startHour: number; afternoonStartHour: number; eveningStartHour: number; hourHeight: number }) {
+  const getBlockStyle = (block: any) => { const sh = parseInt(block.start_time.split(':')[0], 10); const sm = parseInt(block.start_time.split(':')[1], 10); const eh = parseInt(block.end_time.split(':')[0], 10); const em = parseInt(block.end_time.split(':')[1], 10); const hIndex = displayHours.indexOf(sh); if (hIndex === -1) return { display: 'none' }; const top = (hIndex * hourHeight) + ((sm / 60) * hourHeight); const durationMins = (eh * 60 + em) - (sh * 60 + sm); return { top: `${top}px`, height: `${Math.max((durationMins / 60) * hourHeight, 24)}px` } }
   
   const [activeCell, setActiveCell] = useState<{ day: string, hour: number } | null>(null)
 
@@ -256,15 +332,40 @@ function DayView({ date, events, onAddEvent, startHour, hourHeight }: { date: Da
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
       <div className="md:col-span-2 glass overflow-hidden fade-in" style={{ animationDelay: '0.1s' }}>
         <div className="overflow-y-auto max-h-[600px]"><div className="flex relative">
-          <div className="w-14 md:w-16 shrink-0">{displayHours.map(hour => <div key={hour} className="border-b border-border-subtle flex items-start justify-end pr-2 pt-0.5" style={{ height: `${hourHeight}px` }}><span className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span></div>)}</div>
+          <div className="w-14 md:w-16 shrink-0">
+            {displayHours.map(hour => {
+              const isMorningStart = hour === startHour;
+              const isAfternoonStart = hour === afternoonStartHour;
+              const isEveningStart = hour === eveningStartHour;
+              return (
+                <div key={hour} className={`border-b flex items-start justify-end pr-2 pt-0.5 ${isAfternoonStart || isEveningStart ? 'border-t-2 border-t-brand/20 border-b-border-subtle' : 'border-border-subtle'}`} style={{ height: `${hourHeight}px` }}>
+                  <div className="flex flex-col items-end gap-0.5">
+                    {(isMorningStart || isAfternoonStart || isEveningStart) && (
+                      <span className="text-[8px] md:text-[9px] font-bold text-brand bg-brand/10 px-1 rounded whitespace-nowrap hidden md:inline-block">
+                        {isMorningStart ? '上午' : isAfternoonStart ? '下午' : '晚上'}
+                      </span>
+                    )}
+                    <span className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">{String(hour).padStart(2, '0')}:00</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
           <div className="flex-1 relative border-l border-border-subtle cursor-pointer">
             {displayHours.map(hour => {
               const isActive = activeCell?.day === date.toISOString() && activeCell?.hour === hour;
+              const isSectionStart = hour === afternoonStartHour || hour === eveningStartHour;
               return (
                 <div 
                   key={hour} 
-                  className={`border-b border-border-subtle relative transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} 
+                  className={`border-b relative transition-colors ${isActive ? 'bg-brand/10 dark:bg-brand/20' : 'hover:bg-black/5 dark:hover:bg-white/5'} ${isSectionStart ? 'border-t-2 border-t-brand/20 border-b-border-subtle' : 'border-border-subtle'}`} 
                   style={{ height: `${hourHeight}px` }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const data = e.dataTransfer.getData('application/json');
+                    if (data) onDropEvent(JSON.parse(data), date, hour);
+                  }}
                   onClick={() => {
                     if (isActive) {
                       onAddEvent('block', date, `${String(hour).padStart(2, '0')}:00`);
@@ -282,7 +383,7 @@ function DayView({ date, events, onAddEvent, startHour, hourHeight }: { date: Da
                 </div>
               )
             })}
-            {events.blocks.map(block => { const [sh] = block.start_time.split(':').map(Number); if (sh < startHour || sh > 23) return null; return <div key={block.id} className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in shadow-sm ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...getBlockStyle(block), backgroundColor: block.color, pointerEvents: 'none' }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> })}
+            {events.blocks.map(block => { const sh = parseInt(block.start_time.split(':')[0], 10); const hIndex = displayHours.indexOf(sh); if (hIndex === -1) return null; return <div key={block.id} draggable onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('application/json', JSON.stringify({ type: 'block', id: block.id, start: block.start_time, end: block.end_time })) }} className={`absolute left-1 right-1 rounded-lg p-2 text-white text-xs md:text-sm overflow-hidden fade-in shadow-sm cursor-grab active:cursor-grabbing hover:z-10 ${block.completed ? 'opacity-60 line-through' : ''}`} style={{ ...getBlockStyle(block), backgroundColor: block.color }}><p className="font-medium">{block.title}</p><p className="opacity-80 text-[10px] md:text-xs">{block.start_time} - {block.end_time}</p></div> })}
           </div>
         </div></div>
       </div>
@@ -301,7 +402,7 @@ function DayView({ date, events, onAddEvent, startHour, hourHeight }: { date: Da
               <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gray-400" />任务 ({events.tasks.length})</h4>
               <button onClick={() => onAddEvent('task', date)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1"><Plus size={14} /></button>
             </div>
-            {events.tasks.length === 0 ? <p className="text-xs text-gray-400 dark:text-gray-500 bg-bg-tertiary rounded-lg p-3 text-center border border-dashed border-border-default">没有必须今天完成的任务</p> : <div className="space-y-2">{events.tasks.map(task => <div key={task.id} className="p-2.5 rounded-lg bg-bg-tertiary transition-all duration-200 hover:bg-[#EBEAE5] dark:hover:bg-[#383633] border border-transparent hover:border-[#D6D3CD] dark:hover:border-[#4A4844]"><p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400 dark:text-gray-500' : 'text-text-primary'}`}>{task.title}</p></div>)}</div>}
+            {events.tasks.length === 0 ? <p className="text-xs text-gray-400 dark:text-gray-500 bg-bg-tertiary rounded-lg p-3 text-center border border-dashed border-border-default">没有必须今天完成的任务</p> : <div className="space-y-2">{events.tasks.map(task => <div key={task.id} draggable onDragStart={(e) => { e.dataTransfer.setData('application/json', JSON.stringify({ type: 'task', id: task.id })) }} className="p-2.5 rounded-lg bg-bg-tertiary transition-all duration-200 hover:bg-[#EBEAE5] dark:hover:bg-[#383633] border border-transparent hover:border-[#D6D3CD] dark:hover:border-[#4A4844] cursor-grab active:cursor-grabbing"><p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400 dark:text-gray-500' : 'text-text-primary'}`}>{task.title}</p></div>)}</div>}
           </div>
         </div>
       </div>
