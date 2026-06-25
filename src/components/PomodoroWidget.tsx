@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Play, Pause, RotateCcw, Timer, Minimize2, CloudRain, Coffee, Waves, VolumeX, GripHorizontal, Settings } from 'lucide-react'
-import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion'
 
 type Mode = 'work' | 'shortBreak' | 'longBreak'
 type Sound = 'none' | 'rain' | 'cafe' | 'ocean'
@@ -33,6 +33,19 @@ export default function PomodoroWidget() {
   
   const x = useMotionValue(0)
   const y = useMotionValue(0)
+  const dragControls = useDragControls()
+  const widgetRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (isOpen && widgetRef.current && !widgetRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+        setShowSettings(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
 
   useEffect(() => {
     const savedPos = localStorage.getItem('pomodoro_pos')
@@ -103,8 +116,11 @@ export default function PomodoroWidget() {
 
   return (
     <motion.div 
+      ref={widgetRef}
       className="fixed bottom-6 right-6 z-50 touch-none flex flex-col items-end"
       drag
+      dragControls={dragControls}
+      dragListener={false}
       dragMomentum={false}
       style={{ x, y }}
       onDragEnd={handleDragEnd}
@@ -120,6 +136,7 @@ export default function PomodoroWidget() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
+            onPointerDown={(e) => dragControls.start(e)}
             className="w-12 h-12 md:w-14 md:h-14 bg-indigo-600 text-white rounded-full shadow-none flex items-center justify-center btn-press relative cursor-grab active:cursor-grabbing"
           >
             <Timer size={20} className="md:w-6 md:h-6" />
@@ -134,11 +151,14 @@ export default function PomodoroWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="glass rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-xl border-white/20 w-64 md:w-72 origin-bottom-right cursor-grab active:cursor-grabbing"
+            className="bg-bg-page border border-border-default rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-2xl w-64 md:w-72 origin-bottom-right"
           >
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm md:text-base pointer-events-none">
-                <GripHorizontal size={16} className="text-gray-400" /> 专注模式
+            <div 
+              className="flex items-center justify-between mb-3 md:mb-4 cursor-grab active:cursor-grabbing rounded-t-xl"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
+              <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm md:text-base pointer-events-none select-none">
+                <GripHorizontal size={18} className="text-brand dark:text-indigo-400" /> 专注模式
               </h3>
               <div className="flex items-center gap-1">
                 <button 
